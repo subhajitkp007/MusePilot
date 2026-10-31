@@ -77,6 +77,19 @@ class SparkOpenVerifier:
             else:
                 verdict = self._evaluate_deterministic_verdict(step, effective_delta, post_frame)
 
+            if verdict.passed and verdict.confidence < self.settings.verifier_confidence_threshold:
+                verdict = verdict.model_copy(
+                    update={
+                        "passed": False,
+                        "observed_change": (
+                            f"Rejected low-confidence transition "
+                            f"(confidence={verdict.confidence:.2f} < "
+                            f"threshold={self.settings.verifier_confidence_threshold:.2f})."
+                        ),
+                        "retry_hint": "Re-capture the frame and re-verify the transition.",
+                    }
+                )
+
             latency_ms = round((time.perf_counter() - t0) * 1000, 2)
             GLOBAL_TELEMETRY.record_verifier_latency(latency_ms)
             verdict = verdict.model_copy(update={"latency_ms": latency_ms})
@@ -160,7 +173,7 @@ class SparkOpenVerifier:
                 retry_hint="Invalidate SAM 3.1 mask cache, re-segment modal, and click Dismiss (Mask #4).",
             )
 
-        passed = roi_delta > 0.001
+        passed = roi_delta > self.settings.verifier_min_roi_pixel_delta
         return VerificationVerdict(
             model_id=self.settings.verifier_model_id,
             partner_provider=self.settings.partner_provider,

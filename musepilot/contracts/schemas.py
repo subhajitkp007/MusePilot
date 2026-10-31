@@ -28,7 +28,7 @@ class ActionOp(str, Enum):
 class MaskMetadata(BaseModel):
     """Pixel-exact UI segment metadata produced by Meta SAM 3.1."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     mask_id: int = Field(..., ge=1, description="1-indexed Set-of-Mark badge ID")
     bbox: tuple[int, int, int, int] = Field(
@@ -51,6 +51,8 @@ class MaskMetadata(BaseModel):
 
 class MaskSet(BaseModel):
     """Collection of SAM 3.1 masks for a single captured screen frame."""
+
+    model_config = ConfigDict(extra="forbid")
 
     screen_hash: str = Field(..., description="SHA-256 hash of raw screen frame")
     width_px: int = Field(..., gt=0)
@@ -149,6 +151,8 @@ class StepDAG(BaseModel):
 class ActionReceipt(BaseModel):
     """Execution receipt proving DPI-normalized centroid translation and input dispatch."""
 
+    model_config = ConfigDict(extra="forbid")
+
     step_id: int
     operation: ActionOp
     target_mask_id: int
@@ -164,6 +168,8 @@ class ActionReceipt(BaseModel):
 
 class VerificationVerdict(BaseModel):
     """Closed-loop visual state verification verdict from Muse Spark Open."""
+
+    model_config = ConfigDict(extra="forbid")
 
     verifier_version: str = Field(default="verifier_eval_v1")
     model_id: str = Field(default="meta-models/muse-spark-open-1026")
@@ -182,6 +188,8 @@ class VerificationVerdict(BaseModel):
 class VoiceTranscript(BaseModel):
     """Spoken intent transcribed via Meta Muse Voice Transcribe."""
 
+    model_config = ConfigDict(extra="forbid")
+
     model_id: str = Field(default="meta-models/muse-voice-transcribe")
     transcript: str
     confidence: float = Field(default=0.99, ge=0.0, le=1.0)
@@ -191,6 +199,8 @@ class VoiceTranscript(BaseModel):
 
 class StepExecutionRecord(BaseModel):
     """Complete audit record for a single step attempt (including retries/self-healing)."""
+
+    model_config = ConfigDict(extra="forbid")
 
     attempt_number: int = Field(..., ge=1)
     step: StepNode
@@ -202,6 +212,8 @@ class StepExecutionRecord(BaseModel):
 
 class MetricsSummary(BaseModel):
     """Quantitative benchmark metrics computed over a run trace."""
+
+    model_config = ConfigDict(extra="forbid")
 
     total_steps_planned: int
     total_steps_completed: int
@@ -215,6 +227,8 @@ class MetricsSummary(BaseModel):
 
 class RunTrace(BaseModel):
     """Replayable, deterministic full-run trace persisted to JSON."""
+
+    model_config = ConfigDict(extra="forbid")
 
     trace_id: str
     workflow_id: str

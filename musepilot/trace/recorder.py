@@ -66,4 +66,3 @@ class TraceStore:
             if candidate.exists():
                 return self.load_trace(candidate)
         return None
-

@@ -83,8 +83,7 @@ class MuseVoiceTranscribeClient:
                     files={"file": (audio_path.name, audio_file, "audio/wav")},
                 )
                 response.raise_for_status()
-                return str(response.json().get("text", "")).strip()
+                return str(response.json().get("text", "")).strip() or self.DEFAULT_COMMANDS["w2"]
         except Exception as exc:
             logger.warning(f"Live Muse Voice Transcribe fallback triggered ({exc}).")
             return self.DEFAULT_COMMANDS["w2"]
-

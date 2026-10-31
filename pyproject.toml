@@ -55,7 +55,6 @@ select = [
     "S",   # flake8-bandit security checks
 ]
 ignore = [
-    "S101", # allow assert in tests
     "E501", # line length handled by formatter
 ]
 

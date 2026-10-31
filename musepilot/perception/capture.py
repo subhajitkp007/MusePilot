@@ -25,6 +25,7 @@ class CapturedFrame:
     state_label: str = "initial"
 
     def to_png_bytes(self) -> bytes:
+        """Encode the frame image as PNG bytes."""
         buf = io.BytesIO()
         self.image.save(buf, format="PNG")
         return buf.getvalue()

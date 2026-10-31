@@ -2,6 +2,8 @@
 # Licensed under the Apache License, Version 2.0
 """Telemetry, structured logging, and secret redaction package."""
 
+from __future__ import annotations
+
 from musepilot.telemetry.logger import get_logger
 from musepilot.telemetry.metrics import GLOBAL_TELEMETRY, TelemetryRegistry, TelemetrySpan
 from musepilot.telemetry.redaction import (
@@ -23,4 +25,3 @@ __all__ = [
     "redact_step_value",
     "redact_text",
 ]
-

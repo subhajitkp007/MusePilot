@@ -57,3 +57,11 @@ def test_cli_run_and_deterministic_replay() -> None:
     assert cli_main(["replay", "--workflow", "w1"]) == 0
     assert cli_main(["replay", "--workflow", "w2"]) == 0
 
+
+def test_committed_golden_traces_validate_against_strict_schemas() -> None:
+    store = TraceStore()
+    golden_root = Path(__file__).resolve().parent.parent / "demo" / "golden_traces"
+    for workflow_id in ("w1", "w2"):
+        trace = store.load_trace(golden_root / f"golden_{workflow_id}.json")
+        assert trace.workflow_id == workflow_id
+        assert trace.metrics.total_steps_completed >= 1

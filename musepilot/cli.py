@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import asdict
 
 from musepilot.health.checker import run_health_check
 from musepilot.orchestrator import MusePilotOrchestrator
@@ -14,6 +15,7 @@ from musepilot.trace import TraceStore
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the MusePilot CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="musepilot",
         description="MusePilot: Zero-Coordinate, Visually-Verified Multimodal GUI Agent",
@@ -57,12 +59,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Dispatch CLI commands and return the process exit code."""
     parser = build_parser()
     args = parser.parse_args(argv)
 
     if args.command == "health":
         report = run_health_check()
-        print(json.dumps(report.__dict__, indent=2))
+        print(json.dumps(asdict(report), indent=2))
         return 0 if report.passed else 1
 
     if args.command == "run":
@@ -124,4 +127,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

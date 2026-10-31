@@ -14,13 +14,11 @@ from musepilot.telemetry import (
 
 
 def test_redact_text_scrubs_tokens_and_keys() -> None:
-    raw = (
-        "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9 and key sk-1234567890abcdefghij"
-    )
+    raw = "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.fake.signature0123 and key sk-faketestkey1234567"
     scrubbed = redact_text(raw)
     assert scrubbed is not None
     assert "eyJhbGci" not in scrubbed
-    assert "sk-1234567890" not in scrubbed
+    assert "sk-faketestkey1234567" not in scrubbed
     assert REDACTED_TOKEN in scrubbed
 
 
@@ -57,3 +55,11 @@ def test_telemetry_span_recording() -> None:
     assert span_dict["name"] == "test.component"
     assert span_dict["status"] == "OK"
     assert GLOBAL_TELEMETRY.median_sam_ms == 14.5
+
+
+def test_redact_text_scrubs_hyphenated_api_keys() -> None:
+    raw = "key=sk-ant-fake-test-0123456789abcdef"
+    scrubbed = redact_text(raw)
+    assert scrubbed is not None
+    assert "sk-ant-fake-test" not in scrubbed
+    assert REDACTED_TOKEN in scrubbed

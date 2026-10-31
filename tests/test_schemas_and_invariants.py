@@ -99,4 +99,3 @@ def test_open_weight_verifier_model_validation() -> None:
 
     with pytest.raises(ValidationError, match="Meta open-weight model"):
         MusePilotSettings(verifier_model_id="proprietary/closed-verifier-v1")
-

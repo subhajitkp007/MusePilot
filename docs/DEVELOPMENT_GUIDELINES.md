@@ -34,7 +34,7 @@ Every Python, YAML, Dockerfile, and Makefile source file must begin with the sta
 
 ### C. Prompt Engineering & Configuration Hygiene
 - **No Inline Prompts:** System prompts must never be embedded in Python code. Store all prompts in [`prompts/`](../prompts/) with explicit version tags (`prompts/planner_som_v1.txt`, `prompts/verifier_eval_v1.txt`).
-- **Centralized Configuration:** All model IDs, partner endpoints, timeouts, and DPI settings are managed via [`MusePilotSettings`](../musepilot/config.py) (`MUSEPILOT_*` environment variables).
+- **Centralized Configuration:** All model IDs, partner endpoints, timeouts, and DPI settings are managed via [`MusePilotSettings`](../musepilot/config.py) with precedence explicit-init > `MUSEPILOT_*` env vars > `.env` file > [`configs/default_config.yaml`](../configs/default_config.yaml) > built-in defaults. Non-secret defaults live in the YAML file; secrets are env-only and must never enter the YAML.
 
 ### D. Telemetry & Logging Standards
 - Never use bare `print()` statements inside library packages (`musepilot/*`, excluding CLI entry points).

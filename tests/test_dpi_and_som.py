@@ -58,4 +58,3 @@ def test_set_of_mark_renderer_draws_badges() -> None:
     )
     assert som_img.size == frame.image.size
     assert compute_image_hash(som_img) != frame.screen_hash
-

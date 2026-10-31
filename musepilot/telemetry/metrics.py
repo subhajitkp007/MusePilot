@@ -32,11 +32,13 @@ class TelemetrySpan:
     attributes: dict[str, Any] = field(default_factory=dict)
 
     def finish(self, status: str = "OK") -> None:
+        """Stamp span end time, duration, and status."""
         self.end_time_ns = time.time_ns()
         self.duration_ms = round((self.end_time_ns - self.start_time_ns) / 1_000_000, 2)
         self.status = status
 
     def to_otel_dict(self) -> dict[str, Any]:
+        """Export the span as a redacted OTel-compatible dictionary."""
         return {
             "name": self.name,
             "trace_id": self.trace_id,
@@ -59,6 +61,7 @@ class TelemetryRegistry:
         self.verifier_latencies_ms: list[float] = []
 
     def reset(self) -> None:
+        """Clear recorded spans and latency samples."""
         self.spans.clear()
         self.sam_latencies_ms.clear()
         self.planner_latencies_ms.clear()
@@ -66,6 +69,7 @@ class TelemetryRegistry:
 
     @contextmanager
     def start_span(self, name: str, trace_id: str, **attributes: Any) -> Iterator[TelemetrySpan]:
+        """Record a span around the wrapped block and log its completion."""
         span = TelemetrySpan(name=name, trace_id=trace_id, attributes=dict(attributes))
         try:
             yield span
@@ -88,24 +92,30 @@ class TelemetryRegistry:
             )
 
     def record_sam_latency(self, latency_ms: float) -> None:
+        """Append a SAM 3.1 latency sample in milliseconds."""
         self.sam_latencies_ms.append(latency_ms)
 
     def record_planner_latency(self, latency_ms: float) -> None:
+        """Append a planner latency sample in milliseconds."""
         self.planner_latencies_ms.append(latency_ms)
 
     def record_verifier_latency(self, latency_ms: float) -> None:
+        """Append a verifier latency sample in milliseconds."""
         self.verifier_latencies_ms.append(latency_ms)
 
     @property
     def median_sam_ms(self) -> float:
+        """Return the median SAM 3.1 latency in milliseconds."""
         return round(median(self.sam_latencies_ms), 2) if self.sam_latencies_ms else 0.0
 
     @property
     def median_planner_ms(self) -> float:
+        """Return the median planner latency in milliseconds."""
         return round(median(self.planner_latencies_ms), 2) if self.planner_latencies_ms else 0.0
 
     @property
     def median_verifier_ms(self) -> float:
+        """Return the median verifier latency in milliseconds."""
         return round(median(self.verifier_latencies_ms), 2) if self.verifier_latencies_ms else 0.0
 
 

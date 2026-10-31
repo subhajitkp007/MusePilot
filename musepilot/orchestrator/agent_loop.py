@@ -95,6 +95,7 @@ class MusePilotOrchestrator:
         records: list[StepExecutionRecord] = []
         self_healing_recoveries = 0
         active_mask_set = initial_mask_set
+        run_status = "COMPLETED"
 
         # 4. Step Execution + Closed-Loop Verification + Self-Healing
         total_steps = len(dag.steps)
@@ -119,7 +120,8 @@ class MusePilotOrchestrator:
             )
 
             target_mask = active_mask_set.get_mask(step.target_mask_id)
-            assert target_mask is not None
+            if target_mask is None:
+                raise ValueError(f"Target mask #{step.target_mask_id} missing from active MaskSet.")
             verdict = self.verifier.verify_transition(
                 step=step,
                 target_mask=target_mask,
@@ -163,6 +165,20 @@ class MusePilotOrchestrator:
                 )
             )
 
+            if not self.settings.allow_replan_on_obstruction:
+                logger.warning(
+                    f"Self-healing disabled by configuration; escalating step {step.step_id} "
+                    f"to the operator ({verdict.observed_change})",
+                    extra={
+                        "trace_id": trace_id,
+                        "workflow_id": wf,
+                        "step_id": step.step_id,
+                        "verdict": "ESCALATED",
+                    },
+                )
+                run_status = "ESCALATED"
+                break
+
             # Invalidate SAM 3.1 cache, re-segment obstructed frame, and replan via Muse Spark
             self.sam_client.invalidate_cache()
             obstructed_mask_set = self.sam_client.segment_frame(
@@ -191,7 +207,10 @@ class MusePilotOrchestrator:
                 trace_id=trace_id,
             )
             dismiss_mask = obstructed_mask_set.get_mask(dismiss_step.target_mask_id)
-            assert dismiss_mask is not None
+            if dismiss_mask is None:
+                raise ValueError(
+                    f"Dismiss mask #{dismiss_step.target_mask_id} missing after re-segmentation."
+                )
             dismiss_verdict = self.verifier.verify_transition(
                 step=dismiss_step,
                 target_mask=dismiss_mask,
@@ -225,7 +244,8 @@ class MusePilotOrchestrator:
                 trace_id=trace_id,
             )
             retry_mask = active_mask_set.get_mask(step.target_mask_id)
-            assert retry_mask is not None
+            if retry_mask is None:
+                raise ValueError(f"Retry mask #{step.target_mask_id} missing from active MaskSet.")
             retry_verdict = self.verifier.verify_transition(
                 step=step,
                 target_mask=retry_mask,
@@ -266,7 +286,7 @@ class MusePilotOrchestrator:
             initial_mask_set=initial_mask_set,
             plan=dag,
             records=records,
-            status="COMPLETED",
+            status=run_status,
             metrics=metrics,
         )
         self.trace_store.save_trace(run_trace, save_as_golden=save_as_golden)

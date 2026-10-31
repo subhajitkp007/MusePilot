@@ -13,7 +13,7 @@ REDACTED_TOKEN = "[REDACTED]"  # noqa: S105
 # Compiled regex patterns for secret tokens, API keys, and bearer headers
 SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"(Bearer\s+)[A-Za-z0-9\-._~+/]+=*", re.IGNORECASE),
-    re.compile(r"\b(sk-[A-Za-z0-9]{16,})\b"),
+    re.compile(r"\b(sk-[A-Za-z0-9][A-Za-z0-9\-._~+/]{15,})\b"),
     re.compile(r"(api[_-]?key\s*[:=]\s*['\"]?)([A-Za-z0-9\-._~+/]{12,})(['\"]?)", re.IGNORECASE),
     re.compile(r"(password\s*[:=]\s*['\"]?)([^\s'\"]+)(['\"]?)", re.IGNORECASE),
     re.compile(r"(token\s*[:=]\s*['\"]?)([A-Za-z0-9\-._~+/]{12,})(['\"]?)", re.IGNORECASE),

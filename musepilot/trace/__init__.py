@@ -2,7 +2,8 @@
 # Licensed under the Apache License, Version 2.0
 """Trace recording and deterministic replay package."""
 
+from __future__ import annotations
+
 from musepilot.trace.recorder import TraceStore
 
 __all__ = ["TraceStore"]
-

@@ -24,6 +24,8 @@ class HealthCheckReport:
     partner_provider: str
     voice_model_id: str
     display_dpi_scale: float
+    config_yaml_path: str
+    config_yaml_present: bool
     prompts_verified: bool
     directories_writable: bool
     api_keys_configured: bool
@@ -36,6 +38,7 @@ def run_health_check() -> HealthCheckReport:
     settings.ensure_directories()
 
     prompts_ok = settings.planner_prompt_path.exists() and settings.verifier_prompt_path.exists()
+    yaml_ok = settings.config_yaml_path.exists()
     dirs_ok = settings.trace_dir.is_dir() and settings.log_dir.is_dir()
     open_weight_ok = settings.verifier_model_id.startswith(
         ("meta-models/muse-spark-open", "meta-models/muse-glimmer")
@@ -45,6 +48,7 @@ def run_health_check() -> HealthCheckReport:
 
     checks = {
         "versioned_prompts_exist": prompts_ok,
+        "config_yaml_present": yaml_ok,
         "storage_directories_writable": dirs_ok,
         "open_weight_bonus_model_valid": open_weight_ok,
         "display_dpi_scale_calibrated": dpi_ok,
@@ -61,6 +65,8 @@ def run_health_check() -> HealthCheckReport:
         partner_provider=settings.partner_provider,
         voice_model_id=settings.voice_model_id,
         display_dpi_scale=settings.display_dpi_scale,
+        config_yaml_path=str(settings.config_yaml_path),
+        config_yaml_present=yaml_ok,
         prompts_verified=prompts_ok,
         directories_writable=dirs_ok,
         api_keys_configured=keys_configured,

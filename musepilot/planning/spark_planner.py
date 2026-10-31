@@ -92,7 +92,7 @@ class MuseSparkPlanner:
         }
         payload = {
             "model": self.settings.planner_model_id,
-            "temperature": 0.1,
+            "temperature": self.settings.planner_temperature,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {

@@ -4,13 +4,101 @@
 
 from __future__ import annotations
 
+import os
+import warnings
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
+import yaml
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    InitSettingsSource,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_CONFIG_YAML_PATH = PROJECT_ROOT / "configs" / "default_config.yaml"
+CONFIG_YAML_PATH_ENV_VAR = "MUSEPILOT_CONFIG_YAML_PATH"
+
+# Explicit mapping from nested YAML keys to flat MusePilotSettings fields.
+# Only mapped keys are honored; anything else in the YAML is ignored.
+_YAML_FIELD_MAP: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("models", "sam", "model_id"), "sam_model_id"),
+    (("models", "planner", "model_id"), "planner_model_id"),
+    (("models", "planner", "prompt_file"), "planner_prompt_path"),
+    (("models", "planner", "temperature"), "planner_temperature"),
+    (("models", "verifier", "model_id"), "verifier_model_id"),
+    (("models", "verifier", "partner_name"), "partner_provider"),
+    (("models", "verifier", "prompt_file"), "verifier_prompt_path"),
+    (("models", "verifier", "min_roi_pixel_delta"), "verifier_min_roi_pixel_delta"),
+    (("models", "verifier", "confidence_threshold"), "verifier_confidence_threshold"),
+    (("models", "voice", "model_id"), "voice_model_id"),
+    (("execution", "display_dpi_scale"), "display_dpi_scale"),
+    (("execution", "max_retries_per_step"), "max_retries_per_step"),
+    (("execution", "allow_replan_on_obstruction"), "allow_replan_on_obstruction"),
+    (
+        ("execution", "require_destructive_confirmation"),
+        "require_destructive_confirmation",
+    ),
+    (("telemetry", "log_level"), "log_level"),
+    (("telemetry", "log_format"), "log_format"),
+)
+
+_PATH_FIELDS = frozenset({"planner_prompt_path", "verifier_prompt_path"})
+
+
+def resolve_yaml_path() -> Path:
+    """Resolve the active YAML config path from the environment or the default."""
+    override = os.environ.get(CONFIG_YAML_PATH_ENV_VAR)
+    if override:
+        return Path(override).expanduser()
+    return DEFAULT_CONFIG_YAML_PATH
+
+
+def _lookup_nested(data: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    """Return a nested mapping value or None when any level is absent."""
+    node: Any = data
+    for key in keys:
+        if not isinstance(node, dict) or key not in node:
+            return None
+        node = node[key]
+    return node
+
+
+def load_yaml_defaults(yaml_path: Path | None = None) -> dict[str, Any]:
+    """Load flat settings defaults from the YAML config file (empty when unreadable)."""
+    path = yaml_path or resolve_yaml_path()
+    try:
+        raw_text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    try:
+        data = yaml.safe_load(raw_text)
+    except yaml.YAMLError as exc:
+        warnings.warn(f"Ignoring invalid YAML config at {path}: {exc}", stacklevel=2)
+        return {}
+    if not isinstance(data, dict):
+        return {}
+
+    defaults: dict[str, Any] = {}
+    for nested_keys, field_name in _YAML_FIELD_MAP:
+        value = _lookup_nested(data, nested_keys)
+        if value is None:
+            continue
+        if field_name in _PATH_FIELDS:
+            candidate = Path(str(value)).expanduser()
+            value = candidate if candidate.is_absolute() else PROJECT_ROOT / candidate
+        defaults[field_name] = value
+    return defaults
+
+
+class YamlConfigSettingsSource(InitSettingsSource):
+    """Expose YAML config values as the lowest-priority settings source."""
+
+    def __init__(self, settings_cls: type[BaseSettings]) -> None:
+        super().__init__(settings_cls, load_yaml_defaults())
 
 
 class MusePilotSettings(BaseSettings):
@@ -24,7 +112,7 @@ class MusePilotSettings(BaseSettings):
     )
 
     # 1. Meta Model API Settings (SAM 3.1, Muse Spark, Muse Voice Transcribe)
-    meta_api_key: str = Field(default="", description="Meta Model API bearer token")
+    meta_api_key: str = Field(default="", description="Meta Model API Bearer [REDACTED]")
     meta_api_base_url: str = Field(
         default="https://api.meta.ai/v1",
         description="Meta Model API base URL",
@@ -36,6 +124,12 @@ class MusePilotSettings(BaseSettings):
     planner_model_id: str = Field(
         default="meta-models/muse-spark",
         description="Muse Spark multimodal planner model identifier",
+    )
+    planner_temperature: float = Field(
+        default=0.1,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature for live Muse Spark planner calls",
     )
     voice_model_id: str = Field(
         default="meta-models/muse-voice-transcribe",
@@ -56,6 +150,18 @@ class MusePilotSettings(BaseSettings):
         default="meta-models/muse-spark-open-1026",
         description="Official hackathon open-weight model ID for verification",
     )
+    verifier_min_roi_pixel_delta: float = Field(
+        default=0.015,
+        ge=0.0,
+        le=1.0,
+        description="Minimum ROI pixel-change ratio to accept a visual transition",
+    )
+    verifier_confidence_threshold: float = Field(
+        default=0.80,
+        ge=0.0,
+        le=1.0,
+        description="Minimum verifier confidence to pass a transition",
+    )
 
     # 3. Execution, Display & Guardrails
     display_dpi_scale: float = Field(
@@ -69,12 +175,20 @@ class MusePilotSettings(BaseSettings):
         description="Execution mode: 'simulated' (deterministic canvas) or 'live' (API + OS)",
     )
     max_retries_per_step: int = Field(default=2, ge=0, le=5)
+    allow_replan_on_obstruction: bool = Field(
+        default=True,
+        description="Self-heal via replan on obstruction; otherwise escalate to operator",
+    )
     api_timeout_seconds: float = Field(default=15.0, gt=0.0)
     require_destructive_confirmation: bool = Field(default=True)
 
     # 4. Prompt Versioning Paths
     planner_prompt_path: Path = Field(default=PROJECT_ROOT / "prompts" / "planner_som_v1.txt")
     verifier_prompt_path: Path = Field(default=PROJECT_ROOT / "prompts" / "verifier_eval_v1.txt")
+    config_yaml_path: Path = Field(
+        default=DEFAULT_CONFIG_YAML_PATH,
+        description="Active YAML defaults file (override via MUSEPILOT_CONFIG_YAML_PATH)",
+    )
 
     # 5. Telemetry & Storage Paths
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")
@@ -84,6 +198,24 @@ class MusePilotSettings(BaseSettings):
     trace_dir: Path = Field(default=PROJECT_ROOT / "traces")
     log_dir: Path = Field(default=PROJECT_ROOT / "logs")
     golden_trace_dir: Path = Field(default=PROJECT_ROOT / "demo" / "golden_traces")
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Order sources: explicit init > env > dotenv > YAML file > secrets."""
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            YamlConfigSettingsSource(settings_cls),
+            file_secret_settings,
+        )
 
     @field_validator("verifier_model_id")
     @classmethod
