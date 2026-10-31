@@ -1,7 +1,7 @@
 {
-  "trace_id": "caeb2e855c87",
+  "trace_id": "74b51f361a45",
   "workflow_id": "w1",
-  "created_at": "2026-10-31T12:52:31.958467+00:00",
+  "created_at": "2026-10-31T13:07:16.397220+00:00",
   "execution_mode": "simulated",
   "voice_intake": null,
   "initial_mask_set": {
@@ -157,7 +157,7 @@
     "workflow_id": "w1",
     "intent": "Calibrate the simulation parameters: set the frequency slider to 75 percent, enable adaptive damping, lock gain coefficient at 0.942, and run the benchmark.",
     "plan_summary": "Calibrate WebGL/HTML5 simulation slider, enable adaptive damping, enter gain coefficient, and run benchmark",
-    "latency_ms": 0.04,
+    "latency_ms": 0.05,
     "steps": [
       {
         "step_id": 1,
@@ -236,7 +236,7 @@
         "operator_confirmed": true,
         "pre_frame_hash": "d7be9bf8ab4a2265",
         "post_frame_hash": "216b625d0d41987f",
-        "execution_latency_ms": 3.35
+        "execution_latency_ms": 3.14
       },
       "verdict": {
         "verifier_version": "verifier_eval_v1",
@@ -248,7 +248,7 @@
         "observed_change": "Verified transition: Frequency slider handle shifts to 75% target position with emerald highlight (ROI pixel delta=0.237)",
         "obstruction_detected": false,
         "retry_hint": null,
-        "latency_ms": 9.33
+        "latency_ms": 10.53
       },
       "self_healed": false,
       "healing_action": null
@@ -283,7 +283,7 @@
         "operator_confirmed": true,
         "pre_frame_hash": "216b625d0d41987f",
         "post_frame_hash": "d8222f7f0c6e4d5f",
-        "execution_latency_ms": 3.44
+        "execution_latency_ms": 3.47
       },
       "verdict": {
         "verifier_version": "verifier_eval_v1",
@@ -295,7 +295,7 @@
         "observed_change": "Verified transition: Adaptive damping switch toggles to ENABLED state in bright green (ROI pixel delta=0.945)",
         "obstruction_detected": false,
         "retry_hint": null,
-        "latency_ms": 9.78
+        "latency_ms": 12.91
       },
       "self_healed": false,
       "healing_action": null
@@ -330,7 +330,7 @@
         "operator_confirmed": true,
         "pre_frame_hash": "d8222f7f0c6e4d5f",
         "post_frame_hash": "7a4fa23677d4e2ee",
-        "execution_latency_ms": 3.38
+        "execution_latency_ms": 3.13
       },
       "verdict": {
         "verifier_version": "verifier_eval_v1",
@@ -342,7 +342,7 @@
         "observed_change": "Verified transition: Gain coefficient field displays 'GAIN_COEFF: 0.942 [LOCKED]' (ROI pixel delta=0.100)",
         "obstruction_detected": false,
         "retry_hint": null,
-        "latency_ms": 11.18
+        "latency_ms": 13.83
       },
       "self_healed": false,
       "healing_action": null
@@ -377,7 +377,7 @@
         "operator_confirmed": true,
         "pre_frame_hash": "7a4fa23677d4e2ee",
         "post_frame_hash": "73d67e79f2c6b728",
-        "execution_latency_ms": 3.15
+        "execution_latency_ms": 3.5
       },
       "verdict": {
         "verifier_version": "verifier_eval_v1",
@@ -389,7 +389,7 @@
         "observed_change": "Verified transition: Simulation viewport converges with 'STATUS: CONVERGED // Q-FACTOR = 99.4%' (ROI pixel delta=0.949)",
         "obstruction_detected": false,
         "retry_hint": null,
-        "latency_ms": 10.9
+        "latency_ms": 11.93
       },
       "self_healed": false,
       "healing_action": null
@@ -403,7 +403,7 @@
     "verification_pass_rate": 1.0,
     "self_healing_recoveries": 0,
     "median_sam_latency_ms": 0.03,
-    "median_planner_latency_ms": 0.04,
-    "median_verifier_latency_ms": 10.34
+    "median_planner_latency_ms": 0.05,
+    "median_verifier_latency_ms": 12.42
   }
 }

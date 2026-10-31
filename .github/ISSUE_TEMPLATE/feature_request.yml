@@ -1,0 +1,28 @@
+name: Feature Request / Workflow Proposal
+description: Propose a new workflow, guardrail, or Meta model capability for MusePilot
+title: "[Feat]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem & Motivation
+      description: What GUI automation challenge or architectural gap does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: design
+    attributes:
+      label: Proposed Design & Zero-Coordinate Compliance
+      description: Explain how this feature preserves the Zero-Coordinate Invariant (SAM 3.1 mask IDs) and Closed-Loop Verification.
+    validations:
+      required: true
+
+  - type: textarea
+    id: test_plan
+    attributes:
+      label: Proposed Test Plan
+      description: How will this be unit-tested and verified via golden traces?
+    validations:
+      required: true

@@ -1,20 +1,29 @@
 ## Summary
-<!-- Concise description of the feature or fix -->
+<!-- Provide a concise explanation of what this diff changes and why. -->
 
-## Milestone Alignment
-- [ ] M1: SAM 3.1 Frame Capture & Set-of-Mark Overlay
-- [ ] M2: DPI-Invariant Centroid Calculation & OS Input Execution
-- [ ] M3: Muse Spark Multimodal Planner (Mask-ID DAG)
-- [ ] M4: Closed-Loop Visual Verifier (`meta-models/muse-spark-open-1026`)
-- [ ] M5: Muse Voice Transcribe Intake
-- [ ] M6: Real-Time Visual HUD & Telemetry Dashboard
-- [ ] M7: Deterministic Trace Recorder & Replay Engine
-- [ ] M8: Partner Inference Endpoint Verification
-- [ ] M9: Quantitative Grounding & Verification Metrics
+## Test Plan
+<!-- Meta Engineering Standard: Every PR must include reproducible verification commands and output. -->
+```bash
+make lint
+make test
+make health
+```
+- **Recorded Trace ID (if applicable):** `trace_...`
+- **Unit / Fixture Tests Added:**
 
-## Quality & Safety Checklist
-- [ ] Zero-Coordinate Invariant preserved (Planner emits only `target_mask_id`).
-- [ ] `make lint` and `make test` pass cleanly.
-- [ ] No hardcoded API keys, credentials, or sensitive payloads in logs/traces.
-- [ ] Structured telemetry spans and latency logging included for external calls.
+## Component & Milestone Alignment
+- [ ] `perception` — SAM 3.1 Segmentation & Set-of-Mark (SoM) Compositor (`M1`)
+- [ ] `execution` — DPI-Invariant Centroid Math & Guarded Dispatch (`M2`)
+- [ ] `planning` — Muse Spark Multimodal StepDAG Planner (`M3`)
+- [ ] `verification` — Muse Spark Open (`meta-models/muse-spark-open-1026`) Closed-Loop Verifier (`M4`, `M8`)
+- [ ] `voice` — Muse Voice Transcribe Intake (`M5`)
+- [ ] `dashboard` — Streamlit Visual HUD & Telemetry Inspector (`M6`)
+- [ ] `trace` — Deterministic Trace Store & Golden Replay Engine (`M7`)
+- [ ] `orchestrator` — Self-Healing State Machine & Metrics (`M9`, `S1`)
 
+## Architectural & Security Invariants Checklist
+- [ ] **Apache-2.0 Header:** All new files include the standard `# Copyright 2026 MusePilot Authors` header.
+- [ ] **Zero-Coordinate Invariant:** Planner schemas and prompts emit only `target_mask_id` (no raw `[x, y]` coordinates).
+- [ ] **DPI Normalization:** Frame pixel centroids are normalized by `display_dpi_scale`.
+- [ ] **Versioned Prompts:** Any prompt modifications live in `prompts/<name>_v<N>.txt` (no inline prompt strings).
+- [ ] **Telemetry & Redaction:** External calls use `GLOBAL_TELEMETRY.start_span()` and pass `RedactingLogFilter` checks with zero secrets in logs or traces.

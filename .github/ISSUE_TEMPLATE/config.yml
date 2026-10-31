@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability Disclosure
+    url: https://github.com/subhajitkp007/MusePilot/blob/main/SECURITY.md
+    about: Please report security or credential issues privately per SECURITY.md
+  - name: Architecture & Engineering Documentation
+    url: https://github.com/subhajitkp007/MusePilot/tree/main/docs
+    about: Review system architecture, invariants, and development guidelines

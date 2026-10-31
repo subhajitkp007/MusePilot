@@ -152,8 +152,8 @@ MusePilot/
 * [Implementation Plan & 4-Day Sprint Roadmap](docs/IMPLEMENTATION_PLAN.md)
 * [Win Strategy & Rubric Evaluation](docs/EVALUATION_AND_WIN_STRATEGY.md)
 * [Demo Video Storyboard & Submission Playbook](docs/DEMO_AND_SUBMISSION_PLAYBOOK.md)
-* [Engineering & Development Guidelines](docs/DEVELOPMENT_GUIDELINES.md)
-* [Contributing Guide](CONTRIBUTING.md) • [Security & Responsible AI Policy](SECURITY.md)
+* [Engineering & Open-Source Style Guidelines](docs/DEVELOPMENT_GUIDELINES.md)
+* [Contributing Guide](CONTRIBUTING.md) • [Code of Conduct](CODE_OF_CONDUCT.md) • [Security & Responsible AI Policy](SECURITY.md)
 
 ---
 

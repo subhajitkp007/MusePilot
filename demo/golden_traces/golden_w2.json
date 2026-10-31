@@ -1,7 +1,7 @@
 {
-  "trace_id": "1e345faf153b",
+  "trace_id": "2ef689d8706b",
   "workflow_id": "w2",
-  "created_at": "2026-10-31T12:52:32.041463+00:00",
+  "created_at": "2026-10-31T13:07:16.492565+00:00",
   "execution_mode": "simulated",
   "voice_intake": {
     "model_id": "meta-models/muse-voice-transcribe",
@@ -17,7 +17,7 @@
     "dpi_scale": 2.0,
     "model_id": "meta-models/sam-3.1",
     "cached": false,
-    "latency_ms": 0.02,
+    "latency_ms": 0.03,
     "masks": [
       {
         "mask_id": 1,
@@ -197,7 +197,7 @@
         "operator_confirmed": true,
         "pre_frame_hash": "84003946f3b522f3",
         "post_frame_hash": "575311276abf6649",
-        "execution_latency_ms": 3.06
+        "execution_latency_ms": 3.92
       },
       "verdict": {
         "verifier_version": "verifier_eval_v1",
@@ -209,7 +209,7 @@
         "observed_change": "Verified transition: Extract button confirms 'ANOMALY SNAPSHOT COPIED' in emerald green (ROI pixel delta=0.640)",
         "obstruction_detected": false,
         "retry_hint": null,
-        "latency_ms": 9.58
+        "latency_ms": 11.14
       },
       "self_healed": false,
       "healing_action": null
@@ -244,7 +244,7 @@
         "operator_confirmed": true,
         "pre_frame_hash": "575311276abf6649",
         "post_frame_hash": "f7b4bfcb47f5ddd8",
-        "execution_latency_ms": 3.49
+        "execution_latency_ms": 4.05
       },
       "verdict": {
         "verifier_version": "verifier_eval_v1",
@@ -256,7 +256,7 @@
         "observed_change": "Transient session sync modal obstructed target control.",
         "obstruction_detected": true,
         "retry_hint": "Invalidate SAM 3.1 mask cache, re-segment modal, and click Dismiss (Mask #4).",
-        "latency_ms": 10.03
+        "latency_ms": 10.98
       },
       "self_healed": false,
       "healing_action": "Detected UI modal obstruction; initiating SAM 3.1 cache invalidation & replan."
@@ -291,7 +291,7 @@
         "operator_confirmed": true,
         "pre_frame_hash": "f7b4bfcb47f5ddd8",
         "post_frame_hash": "b95d074acf6efee1",
-        "execution_latency_ms": 3.93
+        "execution_latency_ms": 4.5
       },
       "verdict": {
         "verifier_version": "verifier_eval_v1",
@@ -303,7 +303,7 @@
         "observed_change": "Verified transition: Blocking modal dialog disappears and main portal controls become unobstructed (ROI pixel delta=0.003)",
         "obstruction_detected": false,
         "retry_hint": null,
-        "latency_ms": 10.26
+        "latency_ms": 13.02
       },
       "self_healed": true,
       "healing_action": "Dismissed blocking modal via SAM 3.1 Mask #4 and resumed workflow."
@@ -338,7 +338,7 @@
         "operator_confirmed": true,
         "pre_frame_hash": "b95d074acf6efee1",
         "post_frame_hash": "35085e7e07a44019",
-        "execution_latency_ms": 2.85
+        "execution_latency_ms": 3.11
       },
       "verdict": {
         "verifier_version": "verifier_eval_v1",
@@ -350,7 +350,7 @@
         "observed_change": "Verified transition: Incident summary input at Mask #2 displays the extracted anomaly payload (ROI pixel delta=0.611)",
         "obstruction_detected": false,
         "retry_hint": null,
-        "latency_ms": 10.89
+        "latency_ms": 12.12
       },
       "self_healed": true,
       "healing_action": "Original step succeeded after modal dismissal."
@@ -385,7 +385,7 @@
         "operator_confirmed": true,
         "pre_frame_hash": "35085e7e07a44019",
         "post_frame_hash": "3c09d8ddbff85a67",
-        "execution_latency_ms": 3.05
+        "execution_latency_ms": 3.07
       },
       "verdict": {
         "verifier_version": "verifier_eval_v1",
@@ -397,7 +397,7 @@
         "observed_change": "Verified transition: Dispatch button turns green with 'INCIDENT DISPATCHED [ACK]' (ROI pixel delta=0.951)",
         "obstruction_detected": false,
         "retry_hint": null,
-        "latency_ms": 10.34
+        "latency_ms": 11.5
       },
       "self_healed": false,
       "healing_action": null
@@ -412,6 +412,6 @@
     "self_healing_recoveries": 1,
     "median_sam_latency_ms": 0.02,
     "median_planner_latency_ms": 0.04,
-    "median_verifier_latency_ms": 10.26
+    "median_verifier_latency_ms": 11.5
   }
 }

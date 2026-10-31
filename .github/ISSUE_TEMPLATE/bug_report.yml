@@ -1,0 +1,52 @@
+name: Bug Report
+description: Report a bug in perception, planning, execution, verification, or replay
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve **MusePilot**! Please fill out the details below so we can reproduce the issue deterministically.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      options:
+        - perception (SAM 3.1 / Set-of-Mark)
+        - planning (Muse Spark StepDAG)
+        - execution (DPI Centroid / Guardrails)
+        - verification (Muse Spark Open 1026)
+        - voice (Muse Voice Transcribe)
+        - orchestrator (Self-Healing Loop)
+        - dashboard (Streamlit HUD)
+        - docker / ci
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Clear description of what happened vs. what was expected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce / Trace ID
+      description: Exact CLI command or `trace_id` from `traces/` that reproduces the issue.
+      placeholder: |
+        1. Run `make demo-w2`
+        2. Inspect trace `traces/trace_w2_<id>.json`
+    validations:
+      required: true
+
+  - type: textarea
+    id: health_output
+    attributes:
+      label: Output of `make health`
+      render: json
+    validations:
+      required: true
