@@ -1,0 +1,409 @@
+{
+  "trace_id": "caeb2e855c87",
+  "workflow_id": "w1",
+  "created_at": "2026-10-31T12:52:31.958467+00:00",
+  "execution_mode": "simulated",
+  "voice_intake": null,
+  "initial_mask_set": {
+    "screen_hash": "d7be9bf8ab4a2265",
+    "width_px": 1280,
+    "height_px": 800,
+    "dpi_scale": 2.0,
+    "model_id": "meta-models/sam-3.1",
+    "cached": false,
+    "latency_ms": 0.03,
+    "masks": [
+      {
+        "mask_id": 1,
+        "bbox": [
+          120,
+          160,
+          520,
+          220
+        ],
+        "centroid_px": [
+          320,
+          190
+        ],
+        "area_px": 24000,
+        "confidence": 0.98,
+        "semantic_tag": "frequency_slider_control",
+        "polygon": [
+          [
+            120,
+            160
+          ],
+          [
+            520,
+            160
+          ],
+          [
+            520,
+            220
+          ],
+          [
+            120,
+            220
+          ]
+        ]
+      },
+      {
+        "mask_id": 2,
+        "bbox": [
+          120,
+          290,
+          380,
+          360
+        ],
+        "centroid_px": [
+          250,
+          325
+        ],
+        "area_px": 18200,
+        "confidence": 0.99,
+        "semantic_tag": "adaptive_damping_toggle",
+        "polygon": [
+          [
+            120,
+            290
+          ],
+          [
+            380,
+            290
+          ],
+          [
+            380,
+            360
+          ],
+          [
+            120,
+            360
+          ]
+        ]
+      },
+      {
+        "mask_id": 3,
+        "bbox": [
+          120,
+          420,
+          520,
+          490
+        ],
+        "centroid_px": [
+          320,
+          455
+        ],
+        "area_px": 28000,
+        "confidence": 0.97,
+        "semantic_tag": "gain_coefficient_input",
+        "polygon": [
+          [
+            120,
+            420
+          ],
+          [
+            520,
+            420
+          ],
+          [
+            520,
+            490
+          ],
+          [
+            120,
+            490
+          ]
+        ]
+      },
+      {
+        "mask_id": 4,
+        "bbox": [
+          120,
+          560,
+          440,
+          640
+        ],
+        "centroid_px": [
+          280,
+          600
+        ],
+        "area_px": 25600,
+        "confidence": 0.99,
+        "semantic_tag": "run_benchmark_button",
+        "polygon": [
+          [
+            120,
+            560
+          ],
+          [
+            440,
+            560
+          ],
+          [
+            440,
+            640
+          ],
+          [
+            120,
+            640
+          ]
+        ]
+      }
+    ]
+  },
+  "plan": {
+    "plan_version": "planner_som_v1",
+    "model_id": "meta-models/muse-spark",
+    "workflow_id": "w1",
+    "intent": "Calibrate the simulation parameters: set the frequency slider to 75 percent, enable adaptive damping, lock gain coefficient at 0.942, and run the benchmark.",
+    "plan_summary": "Calibrate WebGL/HTML5 simulation slider, enable adaptive damping, enter gain coefficient, and run benchmark",
+    "latency_ms": 0.04,
+    "steps": [
+      {
+        "step_id": 1,
+        "operation": "click",
+        "target_mask_id": 1,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Frequency slider handle shifts to 75% target position with emerald highlight",
+        "reasoning": "Mask #1 segments the interactive frequency slider track on the simulation canvas."
+      },
+      {
+        "step_id": 2,
+        "operation": "click",
+        "target_mask_id": 2,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Adaptive damping switch toggles to ENABLED state in bright green",
+        "reasoning": "Mask #2 segments the adaptive damping toggle control."
+      },
+      {
+        "step_id": 3,
+        "operation": "type",
+        "target_mask_id": 3,
+        "drag_to_mask_id": null,
+        "input_value": "0.942",
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Gain coefficient field displays 'GAIN_COEFF: 0.942 [LOCKED]'",
+        "reasoning": "Mask #3 segments the parameter gain input box."
+      },
+      {
+        "step_id": 4,
+        "operation": "click",
+        "target_mask_id": 4,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Simulation viewport converges with 'STATUS: CONVERGED // Q-FACTOR = 99.4%'",
+        "reasoning": "Mask #4 segments the 'RUN BENCHMARK SIMULATION' execution button."
+      }
+    ]
+  },
+  "records": [
+    {
+      "attempt_number": 1,
+      "step": {
+        "step_id": 1,
+        "operation": "click",
+        "target_mask_id": 1,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Frequency slider handle shifts to 75% target position with emerald highlight",
+        "reasoning": "Mask #1 segments the interactive frequency slider track on the simulation canvas."
+      },
+      "receipt": {
+        "step_id": 1,
+        "operation": "click",
+        "target_mask_id": 1,
+        "frame_centroid_px": [
+          320,
+          190
+        ],
+        "dpi_scale": 2.0,
+        "os_logical_point": [
+          160.0,
+          95.0
+        ],
+        "redacted_input_value": null,
+        "operator_confirmed": true,
+        "pre_frame_hash": "d7be9bf8ab4a2265",
+        "post_frame_hash": "216b625d0d41987f",
+        "execution_latency_ms": 3.35
+      },
+      "verdict": {
+        "verifier_version": "verifier_eval_v1",
+        "model_id": "meta-models/muse-spark-open-1026",
+        "partner_provider": "baseten",
+        "passed": true,
+        "confidence": 0.97,
+        "roi_pixel_delta": 0.2374,
+        "observed_change": "Verified transition: Frequency slider handle shifts to 75% target position with emerald highlight (ROI pixel delta=0.237)",
+        "obstruction_detected": false,
+        "retry_hint": null,
+        "latency_ms": 9.33
+      },
+      "self_healed": false,
+      "healing_action": null
+    },
+    {
+      "attempt_number": 1,
+      "step": {
+        "step_id": 2,
+        "operation": "click",
+        "target_mask_id": 2,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Adaptive damping switch toggles to ENABLED state in bright green",
+        "reasoning": "Mask #2 segments the adaptive damping toggle control."
+      },
+      "receipt": {
+        "step_id": 2,
+        "operation": "click",
+        "target_mask_id": 2,
+        "frame_centroid_px": [
+          250,
+          325
+        ],
+        "dpi_scale": 2.0,
+        "os_logical_point": [
+          125.0,
+          162.5
+        ],
+        "redacted_input_value": null,
+        "operator_confirmed": true,
+        "pre_frame_hash": "216b625d0d41987f",
+        "post_frame_hash": "d8222f7f0c6e4d5f",
+        "execution_latency_ms": 3.44
+      },
+      "verdict": {
+        "verifier_version": "verifier_eval_v1",
+        "model_id": "meta-models/muse-spark-open-1026",
+        "partner_provider": "baseten",
+        "passed": true,
+        "confidence": 0.97,
+        "roi_pixel_delta": 0.9445,
+        "observed_change": "Verified transition: Adaptive damping switch toggles to ENABLED state in bright green (ROI pixel delta=0.945)",
+        "obstruction_detected": false,
+        "retry_hint": null,
+        "latency_ms": 9.78
+      },
+      "self_healed": false,
+      "healing_action": null
+    },
+    {
+      "attempt_number": 1,
+      "step": {
+        "step_id": 3,
+        "operation": "type",
+        "target_mask_id": 3,
+        "drag_to_mask_id": null,
+        "input_value": "0.942",
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Gain coefficient field displays 'GAIN_COEFF: 0.942 [LOCKED]'",
+        "reasoning": "Mask #3 segments the parameter gain input box."
+      },
+      "receipt": {
+        "step_id": 3,
+        "operation": "type",
+        "target_mask_id": 3,
+        "frame_centroid_px": [
+          320,
+          455
+        ],
+        "dpi_scale": 2.0,
+        "os_logical_point": [
+          160.0,
+          227.5
+        ],
+        "redacted_input_value": "0.942",
+        "operator_confirmed": true,
+        "pre_frame_hash": "d8222f7f0c6e4d5f",
+        "post_frame_hash": "7a4fa23677d4e2ee",
+        "execution_latency_ms": 3.38
+      },
+      "verdict": {
+        "verifier_version": "verifier_eval_v1",
+        "model_id": "meta-models/muse-spark-open-1026",
+        "partner_provider": "baseten",
+        "passed": true,
+        "confidence": 0.97,
+        "roi_pixel_delta": 0.1003,
+        "observed_change": "Verified transition: Gain coefficient field displays 'GAIN_COEFF: 0.942 [LOCKED]' (ROI pixel delta=0.100)",
+        "obstruction_detected": false,
+        "retry_hint": null,
+        "latency_ms": 11.18
+      },
+      "self_healed": false,
+      "healing_action": null
+    },
+    {
+      "attempt_number": 1,
+      "step": {
+        "step_id": 4,
+        "operation": "click",
+        "target_mask_id": 4,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Simulation viewport converges with 'STATUS: CONVERGED // Q-FACTOR = 99.4%'",
+        "reasoning": "Mask #4 segments the 'RUN BENCHMARK SIMULATION' execution button."
+      },
+      "receipt": {
+        "step_id": 4,
+        "operation": "click",
+        "target_mask_id": 4,
+        "frame_centroid_px": [
+          280,
+          600
+        ],
+        "dpi_scale": 2.0,
+        "os_logical_point": [
+          140.0,
+          300.0
+        ],
+        "redacted_input_value": null,
+        "operator_confirmed": true,
+        "pre_frame_hash": "7a4fa23677d4e2ee",
+        "post_frame_hash": "73d67e79f2c6b728",
+        "execution_latency_ms": 3.15
+      },
+      "verdict": {
+        "verifier_version": "verifier_eval_v1",
+        "model_id": "meta-models/muse-spark-open-1026",
+        "partner_provider": "baseten",
+        "passed": true,
+        "confidence": 0.97,
+        "roi_pixel_delta": 0.9486,
+        "observed_change": "Verified transition: Simulation viewport converges with 'STATUS: CONVERGED // Q-FACTOR = 99.4%' (ROI pixel delta=0.949)",
+        "obstruction_detected": false,
+        "retry_hint": null,
+        "latency_ms": 10.9
+      },
+      "self_healed": false,
+      "healing_action": null
+    }
+  ],
+  "status": "COMPLETED",
+  "metrics": {
+    "total_steps_planned": 4,
+    "total_steps_completed": 4,
+    "mask_centroid_hit_rate": 1.0,
+    "verification_pass_rate": 1.0,
+    "self_healing_recoveries": 0,
+    "median_sam_latency_ms": 0.03,
+    "median_planner_latency_ms": 0.04,
+    "median_verifier_latency_ms": 10.34
+  }
+}

@@ -1,0 +1,108 @@
+# Copyright 2026 MusePilot Authors
+# Licensed under the Apache License, Version 2.0
+# ==============================================================================
+# MusePilot Multi-Service Docker Compose Stack
+# Services:
+#   1. musepilot-agent: Core Orchestrator & CLI runner (SAM 3.1 + Muse Spark + Open Verifier)
+#   2. musepilot-dashboard: Real-Time Visual HUD & Telemetry Dashboard (Streamlit)
+#   3. musepilot-canvas-demo: Self-contained HTML5 Canvas Simulation Target Server (W1/W2)
+#   4. jaeger: OpenTelemetry Distributed Tracing & Span Collector (Observability)
+# ==============================================================================
+
+services:
+  musepilot-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: musepilot:latest
+    container_name: musepilot-agent
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - MUSEPILOT_EXECUTION_MODE=${MUSEPILOT_EXECUTION_MODE:-simulated}
+      - MUSEPILOT_LOG_LEVEL=${MUSEPILOT_LOG_LEVEL:-INFO}
+      - MUSEPILOT_LOG_FORMAT=json
+      - MUSEPILOT_TELEMETRY_ENABLED=true
+      - MUSEPILOT_OTEL_EXPORTER_ENDPOINT=http://jaeger:4318/v1/traces
+      - MUSEPILOT_TRACE_DIR=/app/traces
+      - MUSEPILOT_LOG_DIR=/app/logs
+    volumes:
+      - ./traces:/app/traces
+      - ./logs:/app/logs
+      - ./demo/golden_traces:/app/demo/golden_traces:ro
+    command: ["run", "--workflow", "w1"]
+    depends_on:
+      musepilot-canvas-demo:
+        condition: service_started
+      jaeger:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - musepilot-net
+
+  musepilot-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: musepilot:latest
+    container_name: musepilot-dashboard
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - MUSEPILOT_TRACE_DIR=/app/traces
+      - MUSEPILOT_LOG_DIR=/app/logs
+      - MUSEPILOT_TELEMETRY_ENABLED=true
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./traces:/app/traces
+      - ./logs:/app/logs
+      - ./demo/golden_traces:/app/demo/golden_traces:ro
+    entrypoint: ["streamlit", "run", "musepilot/dashboard/app.py"]
+    command: ["--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - musepilot-net
+
+  musepilot-canvas-demo:
+    image: python:3.12-slim-bookworm
+    container_name: musepilot-canvas-demo
+    working_dir: /srv/demo
+    volumes:
+      - ./demo:/srv/demo:ro
+    ports:
+      - "8088:8088"
+    command: ["python", "-m", "http.server", "8088", "--bind", "0.0.0.0"]
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - musepilot-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: musepilot-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4318:4318"   # OTLP HTTP receiver
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - musepilot-net
+
+networks:
+  musepilot-net:
+    driver: bridge
+

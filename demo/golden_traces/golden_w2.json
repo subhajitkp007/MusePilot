@@ -1,0 +1,417 @@
+{
+  "trace_id": "1e345faf153b",
+  "workflow_id": "w2",
+  "created_at": "2026-10-31T12:52:32.041463+00:00",
+  "execution_mode": "simulated",
+  "voice_intake": {
+    "model_id": "meta-models/muse-voice-transcribe",
+    "transcript": "Extract today's system anomaly metrics from the monitoring console and dispatch an urgent incident report.",
+    "confidence": 0.99,
+    "audio_duration_sec": 3.1,
+    "latency_ms": 0.0
+  },
+  "initial_mask_set": {
+    "screen_hash": "84003946f3b522f3",
+    "width_px": 1280,
+    "height_px": 800,
+    "dpi_scale": 2.0,
+    "model_id": "meta-models/sam-3.1",
+    "cached": false,
+    "latency_ms": 0.02,
+    "masks": [
+      {
+        "mask_id": 1,
+        "bbox": [
+          100,
+          150,
+          460,
+          225
+        ],
+        "centroid_px": [
+          280,
+          187
+        ],
+        "area_px": 27000,
+        "confidence": 0.99,
+        "semantic_tag": "extract_anomaly_button",
+        "polygon": [
+          [
+            100,
+            150
+          ],
+          [
+            460,
+            150
+          ],
+          [
+            460,
+            225
+          ],
+          [
+            100,
+            225
+          ]
+        ]
+      },
+      {
+        "mask_id": 2,
+        "bbox": [
+          100,
+          285,
+          620,
+          375
+        ],
+        "centroid_px": [
+          360,
+          330
+        ],
+        "area_px": 46800,
+        "confidence": 0.98,
+        "semantic_tag": "incident_summary_input",
+        "polygon": [
+          [
+            100,
+            285
+          ],
+          [
+            620,
+            285
+          ],
+          [
+            620,
+            375
+          ],
+          [
+            100,
+            375
+          ]
+        ]
+      },
+      {
+        "mask_id": 3,
+        "bbox": [
+          100,
+          435,
+          460,
+          515
+        ],
+        "centroid_px": [
+          280,
+          475
+        ],
+        "area_px": 28800,
+        "confidence": 0.99,
+        "semantic_tag": "dispatch_alert_button",
+        "polygon": [
+          [
+            100,
+            435
+          ],
+          [
+            460,
+            435
+          ],
+          [
+            460,
+            515
+          ],
+          [
+            100,
+            515
+          ]
+        ]
+      }
+    ]
+  },
+  "plan": {
+    "plan_version": "planner_som_v1",
+    "model_id": "meta-models/muse-spark",
+    "workflow_id": "w2",
+    "intent": "Extract today's system anomaly metrics from the monitoring console and dispatch an urgent incident report.",
+    "plan_summary": "Extract anomaly snapshot metrics, populate incident report, and dispatch urgent alert",
+    "latency_ms": 0.04,
+    "steps": [
+      {
+        "step_id": 1,
+        "operation": "click",
+        "target_mask_id": 1,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Extract button confirms 'ANOMALY SNAPSHOT COPIED' in emerald green",
+        "reasoning": "Mask #1 segments the anomaly extraction trigger button."
+      },
+      {
+        "step_id": 2,
+        "operation": "type",
+        "target_mask_id": 2,
+        "drag_to_mask_id": null,
+        "input_value": "INCIDENT: GPU-NODE-07 LATENCY SPIKE (+42ms)",
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Incident summary input at Mask #2 displays the extracted anomaly payload",
+        "reasoning": "Mask #2 segments the incident report input box."
+      },
+      {
+        "step_id": 3,
+        "operation": "click",
+        "target_mask_id": 3,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": true,
+        "expected_outcome": "Dispatch button turns green with 'INCIDENT DISPATCHED [ACK]'",
+        "reasoning": "Mask #3 segments the urgent alert dispatch button."
+      }
+    ]
+  },
+  "records": [
+    {
+      "attempt_number": 1,
+      "step": {
+        "step_id": 1,
+        "operation": "click",
+        "target_mask_id": 1,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Extract button confirms 'ANOMALY SNAPSHOT COPIED' in emerald green",
+        "reasoning": "Mask #1 segments the anomaly extraction trigger button."
+      },
+      "receipt": {
+        "step_id": 1,
+        "operation": "click",
+        "target_mask_id": 1,
+        "frame_centroid_px": [
+          280,
+          187
+        ],
+        "dpi_scale": 2.0,
+        "os_logical_point": [
+          140.0,
+          93.5
+        ],
+        "redacted_input_value": null,
+        "operator_confirmed": true,
+        "pre_frame_hash": "84003946f3b522f3",
+        "post_frame_hash": "575311276abf6649",
+        "execution_latency_ms": 3.06
+      },
+      "verdict": {
+        "verifier_version": "verifier_eval_v1",
+        "model_id": "meta-models/muse-spark-open-1026",
+        "partner_provider": "baseten",
+        "passed": true,
+        "confidence": 0.97,
+        "roi_pixel_delta": 0.6402,
+        "observed_change": "Verified transition: Extract button confirms 'ANOMALY SNAPSHOT COPIED' in emerald green (ROI pixel delta=0.640)",
+        "obstruction_detected": false,
+        "retry_hint": null,
+        "latency_ms": 9.58
+      },
+      "self_healed": false,
+      "healing_action": null
+    },
+    {
+      "attempt_number": 1,
+      "step": {
+        "step_id": 2,
+        "operation": "type",
+        "target_mask_id": 2,
+        "drag_to_mask_id": null,
+        "input_value": "INCIDENT: GPU-NODE-07 LATENCY SPIKE (+42ms)",
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Incident summary input at Mask #2 displays the extracted anomaly payload",
+        "reasoning": "Mask #2 segments the incident report input box."
+      },
+      "receipt": {
+        "step_id": 2,
+        "operation": "type",
+        "target_mask_id": 2,
+        "frame_centroid_px": [
+          360,
+          330
+        ],
+        "dpi_scale": 2.0,
+        "os_logical_point": [
+          180.0,
+          165.0
+        ],
+        "redacted_input_value": "INCIDENT: GPU-NODE-07 LATENCY SPIKE (+42ms)",
+        "operator_confirmed": true,
+        "pre_frame_hash": "575311276abf6649",
+        "post_frame_hash": "f7b4bfcb47f5ddd8",
+        "execution_latency_ms": 3.49
+      },
+      "verdict": {
+        "verifier_version": "verifier_eval_v1",
+        "model_id": "meta-models/muse-spark-open-1026",
+        "partner_provider": "baseten",
+        "passed": false,
+        "confidence": 0.98,
+        "roi_pixel_delta": 0.6231,
+        "observed_change": "Transient session sync modal obstructed target control.",
+        "obstruction_detected": true,
+        "retry_hint": "Invalidate SAM 3.1 mask cache, re-segment modal, and click Dismiss (Mask #4).",
+        "latency_ms": 10.03
+      },
+      "self_healed": false,
+      "healing_action": "Detected UI modal obstruction; initiating SAM 3.1 cache invalidation & replan."
+    },
+    {
+      "attempt_number": 2,
+      "step": {
+        "step_id": 1,
+        "operation": "click",
+        "target_mask_id": 4,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Blocking modal dialog disappears and main portal controls become unobstructed",
+        "reasoning": "Mask #4 is the 'DISMISS & RESYNC' button on the transient blocking modal."
+      },
+      "receipt": {
+        "step_id": 1,
+        "operation": "click",
+        "target_mask_id": 4,
+        "frame_centroid_px": [
+          640,
+          457
+        ],
+        "dpi_scale": 2.0,
+        "os_logical_point": [
+          320.0,
+          228.5
+        ],
+        "redacted_input_value": null,
+        "operator_confirmed": true,
+        "pre_frame_hash": "f7b4bfcb47f5ddd8",
+        "post_frame_hash": "b95d074acf6efee1",
+        "execution_latency_ms": 3.93
+      },
+      "verdict": {
+        "verifier_version": "verifier_eval_v1",
+        "model_id": "meta-models/muse-spark-open-1026",
+        "partner_provider": "baseten",
+        "passed": true,
+        "confidence": 0.97,
+        "roi_pixel_delta": 0.0026,
+        "observed_change": "Verified transition: Blocking modal dialog disappears and main portal controls become unobstructed (ROI pixel delta=0.003)",
+        "obstruction_detected": false,
+        "retry_hint": null,
+        "latency_ms": 10.26
+      },
+      "self_healed": true,
+      "healing_action": "Dismissed blocking modal via SAM 3.1 Mask #4 and resumed workflow."
+    },
+    {
+      "attempt_number": 2,
+      "step": {
+        "step_id": 2,
+        "operation": "type",
+        "target_mask_id": 2,
+        "drag_to_mask_id": null,
+        "input_value": "INCIDENT: GPU-NODE-07 LATENCY SPIKE (+42ms)",
+        "is_sensitive": false,
+        "is_destructive": false,
+        "expected_outcome": "Incident summary input at Mask #2 displays the extracted anomaly payload",
+        "reasoning": "Mask #2 segments the incident report input box."
+      },
+      "receipt": {
+        "step_id": 2,
+        "operation": "type",
+        "target_mask_id": 2,
+        "frame_centroid_px": [
+          360,
+          330
+        ],
+        "dpi_scale": 2.0,
+        "os_logical_point": [
+          180.0,
+          165.0
+        ],
+        "redacted_input_value": "INCIDENT: GPU-NODE-07 LATENCY SPIKE (+42ms)",
+        "operator_confirmed": true,
+        "pre_frame_hash": "b95d074acf6efee1",
+        "post_frame_hash": "35085e7e07a44019",
+        "execution_latency_ms": 2.85
+      },
+      "verdict": {
+        "verifier_version": "verifier_eval_v1",
+        "model_id": "meta-models/muse-spark-open-1026",
+        "partner_provider": "baseten",
+        "passed": true,
+        "confidence": 0.97,
+        "roi_pixel_delta": 0.6112,
+        "observed_change": "Verified transition: Incident summary input at Mask #2 displays the extracted anomaly payload (ROI pixel delta=0.611)",
+        "obstruction_detected": false,
+        "retry_hint": null,
+        "latency_ms": 10.89
+      },
+      "self_healed": true,
+      "healing_action": "Original step succeeded after modal dismissal."
+    },
+    {
+      "attempt_number": 1,
+      "step": {
+        "step_id": 3,
+        "operation": "click",
+        "target_mask_id": 3,
+        "drag_to_mask_id": null,
+        "input_value": null,
+        "is_sensitive": false,
+        "is_destructive": true,
+        "expected_outcome": "Dispatch button turns green with 'INCIDENT DISPATCHED [ACK]'",
+        "reasoning": "Mask #3 segments the urgent alert dispatch button."
+      },
+      "receipt": {
+        "step_id": 3,
+        "operation": "click",
+        "target_mask_id": 3,
+        "frame_centroid_px": [
+          280,
+          475
+        ],
+        "dpi_scale": 2.0,
+        "os_logical_point": [
+          140.0,
+          237.5
+        ],
+        "redacted_input_value": null,
+        "operator_confirmed": true,
+        "pre_frame_hash": "35085e7e07a44019",
+        "post_frame_hash": "3c09d8ddbff85a67",
+        "execution_latency_ms": 3.05
+      },
+      "verdict": {
+        "verifier_version": "verifier_eval_v1",
+        "model_id": "meta-models/muse-spark-open-1026",
+        "partner_provider": "baseten",
+        "passed": true,
+        "confidence": 0.97,
+        "roi_pixel_delta": 0.951,
+        "observed_change": "Verified transition: Dispatch button turns green with 'INCIDENT DISPATCHED [ACK]' (ROI pixel delta=0.951)",
+        "obstruction_detected": false,
+        "retry_hint": null,
+        "latency_ms": 10.34
+      },
+      "self_healed": false,
+      "healing_action": null
+    }
+  ],
+  "status": "COMPLETED",
+  "metrics": {
+    "total_steps_planned": 3,
+    "total_steps_completed": 3,
+    "mask_centroid_hit_rate": 1.0,
+    "verification_pass_rate": 1.0,
+    "self_healing_recoveries": 1,
+    "median_sam_latency_ms": 0.02,
+    "median_planner_latency_ms": 0.04,
+    "median_verifier_latency_ms": 10.26
+  }
+}

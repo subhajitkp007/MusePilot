@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# problem statement & local runtime directories
+project_intial_idea.md
+Meta_Global_AI_devloper_hackathon_details.md
+*.mht
+logs/
+traces/

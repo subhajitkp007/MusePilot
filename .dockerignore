@@ -1,0 +1,32 @@
+# Git & VCS
+.git
+.gitignore
+.github
+
+# Virtual Environments & Caches
+.venv
+venv
+env
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Secrets & Local State
+.env
+.env.*
+!.env.example
+*.mht
+project_intial_idea.md
+Meta_Global_AI_devloper_hackathon_details.md
+
+# Runtime Logs & Recorded Traces (mounted via volume in Docker)
+logs/*
+traces/*
+*.log
+
