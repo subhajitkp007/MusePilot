@@ -39,6 +39,7 @@ Every Python, YAML, Dockerfile, and Makefile source file must begin with the sta
 ### D. Telemetry & Logging Standards
 - Never use bare `print()` statements inside library packages (`musepilot/*`, excluding CLI entry points).
 - Use `get_logger(__name__)` from `musepilot.telemetry` and wrap external/model operations in `with GLOBAL_TELEMETRY.start_span("<component>.<operation>", trace_id=trace_id, model_id=...):`.
+- Ship spans to the OTLP/HTTP collector (Jaeger in compose) via `GLOBAL_TELEMETRY.export_otlp()`; export is fail-soft and never fails a run. When `telemetry_enabled=false`, record no spans, samples, or exports.
 
 ---
 

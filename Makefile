@@ -42,6 +42,9 @@ replay-w1: ## Replay golden trace for Workflow 1 deterministically
 replay-w2: ## Replay golden trace for Workflow 2 deterministically
 	$(PYTHON) -m musepilot.cli replay --workflow w2
 
+eval: ## Run quantitative evaluation benchmark over historical traces
+	$(PYTHON) -m musepilot.cli eval
+
 dashboard: ## Launch the real-time MusePilot HUD & Telemetry Dashboard
 	$(STREAMLIT) run musepilot/dashboard/app.py
 

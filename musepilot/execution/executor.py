@@ -8,6 +8,7 @@ import time
 
 from musepilot.config import get_settings
 from musepilot.contracts.schemas import ActionOp, ActionReceipt, MaskSet, StepNode
+from musepilot.execution.device import DeviceDriver
 from musepilot.perception.capture import CapturedFrame, ScreenCaptureEngine
 from musepilot.telemetry import GLOBAL_TELEMETRY, get_logger, redact_step_value
 
@@ -48,6 +49,7 @@ class ActionExecutor:
         next_state_label: str,
         trace_id: str = "local",
         auto_confirm_destructive: bool = True,
+        device_driver: DeviceDriver | None = None,
     ) -> tuple[CapturedFrame, ActionReceipt]:
         """Execute a single StepNode at its SAM 3.1 mask centroid and capture the post-frame."""
         if step.operation not in self.ALLOWED_OPS:
@@ -87,14 +89,21 @@ class ActionExecutor:
                     )
 
             logical_point = translate_frame_px_to_os_logical(mask.centroid_px, mask_set.dpi_scale)
+            drag_destination = self._resolve_drag_destination(step, mask_set)
 
-            # Render or capture the post-action visual state
-            post_frame = self.capture_engine.render_canvas_state(
-                workflow_id=workflow_id,
-                state_label=next_state_label,
-                width_px=pre_frame.width_px,
-                height_px=pre_frame.height_px,
-            )
+            if device_driver is not None:
+                self._dispatch_to_device(
+                    device_driver, step.operation, logical_point, drag_destination, step.input_value
+                )
+                post_frame = device_driver.capture_frame(state_label=next_state_label)
+            else:
+                # Render or capture the post-action visual state
+                post_frame = self.capture_engine.render_canvas_state(
+                    workflow_id=workflow_id,
+                    state_label=next_state_label,
+                    width_px=pre_frame.width_px,
+                    height_px=pre_frame.height_px,
+                )
 
             latency_ms = round((time.perf_counter() - t0) * 1000, 2)
             receipt = ActionReceipt(
@@ -104,6 +113,7 @@ class ActionExecutor:
                 frame_centroid_px=mask.centroid_px,
                 dpi_scale=mask_set.dpi_scale,
                 os_logical_point=logical_point,
+                drag_to_logical_point=drag_destination,
                 redacted_input_value=redact_step_value(
                     step.input_value, is_sensitive=step.is_sensitive
                 ),
@@ -113,3 +123,36 @@ class ActionExecutor:
                 execution_latency_ms=latency_ms,
             )
             return post_frame, receipt
+
+    def _resolve_drag_destination(
+        self, step: StepNode, mask_set: MaskSet
+    ) -> tuple[float, float] | None:
+        """Resolve a drag destination mask into OS logical coordinates (None unless dragging)."""
+        if step.operation != ActionOp.DRAG or step.drag_to_mask_id is None:
+            return None
+        dest_mask = mask_set.get_mask(step.drag_to_mask_id)
+        if dest_mask is None:
+            raise ValueError(
+                f"Drag destination mask #{step.drag_to_mask_id} not found in active MaskSet."
+            )
+        return translate_frame_px_to_os_logical(dest_mask.centroid_px, mask_set.dpi_scale)
+
+    def _dispatch_to_device(
+        self,
+        driver: DeviceDriver,
+        operation: ActionOp,
+        point: tuple[float, float],
+        drag_destination: tuple[float, float] | None,
+        input_value: str | None,
+    ) -> None:
+        """Dispatch an input operation to a physical device driver."""
+        x, y = point
+        if operation == ActionOp.CLICK:
+            driver.tap(x, y)
+        elif operation == ActionOp.TYPE:
+            driver.text(input_value or "")
+        elif operation == ActionOp.DRAG:
+            if drag_destination is None:
+                raise ValueError("Drag operation requires drag_to_mask_id.")
+            driver.swipe(x, y, drag_destination[0], drag_destination[1])
+        # WAIT and VERIFY are capture-only on physical devices.

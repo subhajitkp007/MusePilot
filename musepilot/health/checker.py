@@ -10,6 +10,7 @@ import sys
 from dataclasses import asdict, dataclass
 
 from musepilot.config import get_settings
+from musepilot.execution.device import AdbDeviceDriver
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,8 @@ class HealthCheckReport:
     display_dpi_scale: float
     config_yaml_path: str
     config_yaml_present: bool
+    adb_available: bool
+    adb_serial: str
     prompts_verified: bool
     directories_writable: bool
     api_keys_configured: bool
@@ -67,6 +70,8 @@ def run_health_check() -> HealthCheckReport:
         display_dpi_scale=settings.display_dpi_scale,
         config_yaml_path=str(settings.config_yaml_path),
         config_yaml_present=yaml_ok,
+        adb_available=AdbDeviceDriver.is_available(),
+        adb_serial=settings.adb_serial,
         prompts_verified=prompts_ok,
         directories_writable=dirs_ok,
         api_keys_configured=keys_configured,

@@ -175,6 +175,10 @@ class MusePilotSettings(BaseSettings):
         description="Execution mode: 'simulated' (deterministic canvas) or 'live' (API + OS)",
     )
     max_retries_per_step: int = Field(default=2, ge=0, le=5)
+    adb_serial: str = Field(
+        default="",
+        description="Preferred adb device serial (empty selects the first attached device)",
+    )
     allow_replan_on_obstruction: bool = Field(
         default=True,
         description="Self-heal via replan on obstruction; otherwise escalate to operator",

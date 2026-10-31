@@ -159,6 +159,9 @@ class ActionReceipt(BaseModel):
     frame_centroid_px: tuple[int, int]
     dpi_scale: float
     os_logical_point: tuple[float, float]
+    drag_to_logical_point: tuple[float, float] | None = Field(
+        default=None, description="Destination OS point when operation is 'drag'"
+    )
     redacted_input_value: str | None = None
     operator_confirmed: bool = True
     pre_frame_hash: str
@@ -239,4 +242,7 @@ class RunTrace(BaseModel):
     plan: StepDAG
     records: list[StepExecutionRecord] = Field(default_factory=list)
     status: str = Field(default="COMPLETED")
+    resume_state_label: str | None = Field(
+        default=None, description="Canvas state label to resume from when paused"
+    )
     metrics: MetricsSummary

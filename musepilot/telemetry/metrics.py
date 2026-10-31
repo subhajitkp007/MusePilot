@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 import secrets
 import time
 from collections.abc import Iterator
@@ -12,10 +13,25 @@ from dataclasses import dataclass, field
 from statistics import median
 from typing import Any
 
+import httpx
+
+from musepilot.config import get_settings
 from musepilot.telemetry.logger import get_logger
 from musepilot.telemetry.redaction import redact_dict
 
 logger = get_logger("musepilot.telemetry")
+
+
+def _normalize_hex_id(raw: str, width: int) -> str:
+    """Pad a trace/span ID to fixed-width lowercase hex, zero-filling junk."""
+    if re.fullmatch(r"[0-9a-fA-F]+", raw or ""):
+        return raw.lower().rjust(width, "0")[-width:]
+    return "0" * width
+
+
+def _telemetry_enabled() -> bool:
+    """Return True unless the operator disabled telemetry via settings."""
+    return get_settings().telemetry_enabled
 
 
 @dataclass
@@ -50,6 +66,23 @@ class TelemetrySpan:
             "attributes": redact_dict(self.attributes),
         }
 
+    def to_otlp_span(self) -> dict[str, Any]:
+        """Export the span in OTLP/HTTP JSON format for collectors like Jaeger."""
+        attributes = [
+            {"key": key, "value": {"stringValue": str(value)}}
+            for key, value in redact_dict(self.attributes).items()
+        ]
+        return {
+            "traceId": _normalize_hex_id(self.trace_id, 32),
+            "spanId": _normalize_hex_id(self.span_id, 16),
+            "name": self.name,
+            "kind": 1,
+            "startTimeUnixNano": str(self.start_time_ns),
+            "endTimeUnixNano": str(self.end_time_ns or self.start_time_ns),
+            "attributes": attributes,
+            "status": {"code": 1 if self.status == "OK" else 2},
+        }
+
 
 class TelemetryRegistry:
     """In-memory collector for spans, model latencies, and benchmark metrics."""
@@ -71,6 +104,9 @@ class TelemetryRegistry:
     def start_span(self, name: str, trace_id: str, **attributes: Any) -> Iterator[TelemetrySpan]:
         """Record a span around the wrapped block and log its completion."""
         span = TelemetrySpan(name=name, trace_id=trace_id, attributes=dict(attributes))
+        if not _telemetry_enabled():
+            yield span
+            return
         try:
             yield span
             span.finish("OK")
@@ -93,15 +129,51 @@ class TelemetryRegistry:
 
     def record_sam_latency(self, latency_ms: float) -> None:
         """Append a SAM 3.1 latency sample in milliseconds."""
-        self.sam_latencies_ms.append(latency_ms)
+        if _telemetry_enabled():
+            self.sam_latencies_ms.append(latency_ms)
 
     def record_planner_latency(self, latency_ms: float) -> None:
         """Append a planner latency sample in milliseconds."""
-        self.planner_latencies_ms.append(latency_ms)
+        if _telemetry_enabled():
+            self.planner_latencies_ms.append(latency_ms)
 
     def record_verifier_latency(self, latency_ms: float) -> None:
         """Append a verifier latency sample in milliseconds."""
-        self.verifier_latencies_ms.append(latency_ms)
+        if _telemetry_enabled():
+            self.verifier_latencies_ms.append(latency_ms)
+
+    def to_otlp_payload(self) -> dict[str, Any]:
+        """Build an OTLP/HTTP JSON payload for the recorded spans."""
+        return {
+            "resourceSpans": [
+                {
+                    "resource": {
+                        "attributes": [
+                            {"key": "service.name", "value": {"stringValue": "musepilot-agent"}}
+                        ]
+                    },
+                    "scopeSpans": [
+                        {
+                            "scope": {"name": "musepilot"},
+                            "spans": [span.to_otlp_span() for span in self.spans],
+                        }
+                    ],
+                }
+            ]
+        }
+
+    def export_otlp(self, endpoint: str | None = None) -> bool:
+        """POST recorded spans to an OTLP/HTTP collector; return False on any failure."""
+        if not _telemetry_enabled():
+            return False
+        url = endpoint or get_settings().otel_exporter_endpoint
+        try:
+            with httpx.Client(timeout=5.0) as client:
+                response = client.post(url, json=self.to_otlp_payload())
+            return 200 <= response.status_code < 300
+        except Exception as exc:
+            logger.warning(f"OTLP export to {url} failed ({exc}); continuing without export.")
+            return False
 
     @property
     def median_sam_ms(self) -> float:

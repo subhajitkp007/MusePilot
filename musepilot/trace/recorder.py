@@ -71,3 +71,16 @@ class TraceStore:
             if candidate.exists():
                 return self.load_trace(candidate)
         return None
+
+    def find_trace(self, trace_id: str) -> RunTrace | None:
+        """Locate a persisted trace by ID across run and golden directories."""
+        wanted = trace_id.strip().lower()
+        for directory in (self.trace_dir, self.golden_dir):
+            matches = sorted(directory.glob(f"trace_*_{wanted}.json"))
+            if matches:
+                return self.load_trace(matches[0])
+        for golden_file in sorted(self.golden_dir.glob("golden_*.json")):
+            candidate = self.load_trace(golden_file)
+            if candidate.trace_id.lower() == wanted:
+                return candidate
+        return None

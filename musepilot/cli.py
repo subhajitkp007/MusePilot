@@ -8,7 +8,9 @@ import argparse
 import json
 import sys
 from dataclasses import asdict
+from pathlib import Path
 
+from musepilot.eval.benchmark import BenchmarkEngine
 from musepilot.health.checker import run_health_check
 from musepilot.orchestrator import MusePilotOrchestrator
 from musepilot.trace import TraceStore
@@ -41,6 +43,39 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional custom operator intent string",
     )
+    run_p.add_argument(
+        "--pause-after",
+        type=int,
+        default=None,
+        help="Pause the run after N verified steps for later resume",
+    )
+
+    # `resume` command
+    res_p = sub.add_parser("resume", help="Resume a paused workflow trace")
+    res_p.add_argument(
+        "--trace-id",
+        type=str,
+        required=True,
+        help="Trace ID of the paused run to resume",
+    )
+    res_p.add_argument(
+        "--intent",
+        type=str,
+        default=None,
+        help="Optional new intent to re-target the remaining steps",
+    )
+    res_p.add_argument(
+        "--voice-audio",
+        type=Path,
+        default=None,
+        help="Optional audio file with a spoken re-target command",
+    )
+    res_p.add_argument(
+        "--pause-after",
+        type=int,
+        default=None,
+        help="Pause again after reaching the given original step position",
+    )
 
     # `replay` command
     rep_p = sub.add_parser(
@@ -51,6 +86,23 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["w1", "w2"],
         default="w1",
         help="Workflow ID to replay",
+    )
+
+    # `eval` command
+    ev_p = sub.add_parser(
+        "eval", help="Run quantitative evaluation benchmark over historical traces"
+    )
+    ev_p.add_argument(
+        "--format",
+        choices=["markdown", "json"],
+        default="markdown",
+        help="Output report format (markdown or json)",
+    )
+    ev_p.add_argument(
+        "--save",
+        type=Path,
+        default=None,
+        help="Optional file path to persist JSON benchmark report",
     )
 
     # `health` command
@@ -76,8 +128,29 @@ def main(argv: list[str] | None = None) -> int:
             use_voice_intake=(args.workflow == "w2"),
             inject_modal_obstruction=args.inject_modal,
             save_as_golden=True,
+            pause_after_step=args.pause_after,
         )
         summary = {
+            "trace_id": trace.trace_id,
+            "workflow_id": trace.workflow_id,
+            "status": trace.status,
+            "plan_summary": trace.plan.plan_summary,
+            "records_executed": len(trace.records),
+            "metrics": trace.metrics.model_dump(),
+        }
+        print(json.dumps(summary, indent=2))
+        return 0
+
+    if args.command == "resume":
+        orchestrator = MusePilotOrchestrator()
+        trace = orchestrator.resume_workflow(
+            trace_id=args.trace_id,
+            new_intent=args.intent,
+            voice_audio=args.voice_audio,
+            pause_after_step=args.pause_after,
+        )
+        summary = {
+            "mode": "RESUME",
             "trace_id": trace.trace_id,
             "workflow_id": trace.workflow_id,
             "status": trace.status,
@@ -120,6 +193,18 @@ def main(argv: list[str] | None = None) -> int:
             "metrics": trace.metrics.model_dump(),
         }
         print(json.dumps(replay_summary, indent=2))
+        return 0
+
+    if args.command == "eval":
+        engine = BenchmarkEngine()
+        report = engine.evaluate_traces()
+        if args.save is not None:
+            args.save.parent.mkdir(parents=True, exist_ok=True)
+            args.save.write_text(report.to_json(), encoding="utf-8")
+        if args.format == "json":
+            print(report.to_json())
+        else:
+            print(report.to_markdown_table())
         return 0
 
     return 1

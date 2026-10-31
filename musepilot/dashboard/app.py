@@ -7,6 +7,7 @@ from __future__ import annotations
 import streamlit as st
 
 from musepilot.config import get_settings
+from musepilot.eval.benchmark import BenchmarkEngine
 from musepilot.health.checker import run_health_check
 from musepilot.orchestrator import MusePilotOrchestrator
 from musepilot.perception import (
@@ -211,6 +212,34 @@ def render_dashboard() -> None:
                         "healing_action": rec.healing_action,
                     }
                 )
+
+    # Quantitative Rehearsal Benchmark Analytics (Milestone M9)
+    with st.expander(
+        "📊 Quantitative Rehearsal Benchmark Analytics (Milestone M9)", expanded=False
+    ):
+        engine = BenchmarkEngine()
+        bench_report = engine.evaluate_traces()
+        bc1, bc2, bc3, bc4 = st.columns(4)
+        bc1.metric(
+            "Analyzed Runs",
+            str(bench_report.total_runs_analyzed),
+            f"{bench_report.total_steps_executed} steps",
+        )
+        bc2.metric(
+            "Mean Mask Hit Rate", f"{bench_report.mean_mask_hit_rate * 100:.1f}%", "100% Target"
+        )
+        bc3.metric(
+            "Verification Precision",
+            f"{bench_report.mean_verification_pass_rate * 100:.1f}%",
+            ">=95% Target",
+        )
+        bc4.metric(
+            "Self-Healing Rate",
+            f"{bench_report.self_healing_success_rate * 100:.1f}%",
+            f"{bench_report.total_self_healing_recoveries} recoveries",
+        )
+        st.markdown(bench_report.to_markdown_table())
+        st.json(bench_report.workflows)
 
     # OpenTelemetry Spans & Trace Export
     with st.expander("📡 OpenTelemetry Spans & Structured Trace Inspector"):
