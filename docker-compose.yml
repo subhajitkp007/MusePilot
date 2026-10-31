@@ -29,9 +29,10 @@ services:
       - MUSEPILOT_TRACE_DIR=/app/traces
       - MUSEPILOT_LOG_DIR=/app/logs
     volumes:
+      - ./musepilot:/app/musepilot
       - ./traces:/app/traces
       - ./logs:/app/logs
-      - ./demo/golden_traces:/app/demo/golden_traces:ro
+      - ./demo/golden_traces:/app/demo/golden_traces
     command: ["run", "--workflow", "w1"]
     depends_on:
       musepilot-canvas-demo:
@@ -60,9 +61,10 @@ services:
     ports:
       - "8501:8501"
     volumes:
+      - ./musepilot:/app/musepilot
       - ./traces:/app/traces
       - ./logs:/app/logs
-      - ./demo/golden_traces:/app/demo/golden_traces:ro
+      - ./demo/golden_traces:/app/demo/golden_traces
     entrypoint: ["streamlit", "run", "musepilot/dashboard/app.py"]
     command: ["--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true"]
     healthcheck:

@@ -84,7 +84,7 @@ def render_dashboard() -> None:
                 workflow_id=workflow_choice,
                 use_voice_intake=(workflow_choice == "w2"),
                 inject_modal_obstruction=inject_modal,
-                save_as_golden=True,
+                save_as_golden=False,
             )
     elif replay_clicked:
         trace = store.load_golden_or_latest(workflow_choice)
@@ -93,7 +93,7 @@ def render_dashboard() -> None:
                 workflow_id=workflow_choice,
                 use_voice_intake=(workflow_choice == "w2"),
                 inject_modal_obstruction=inject_modal,
-                save_as_golden=True,
+                save_as_golden=False,
             )
     else:
         trace = store.load_golden_or_latest(workflow_choice)
@@ -102,7 +102,7 @@ def render_dashboard() -> None:
                 workflow_id=workflow_choice,
                 use_voice_intake=(workflow_choice == "w2"),
                 inject_modal_obstruction=(workflow_choice == "w2"),
-                save_as_golden=True,
+                save_as_golden=False,
             )
 
     # Top-level Quantitative Metrics Row

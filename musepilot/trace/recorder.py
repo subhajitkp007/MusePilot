@@ -38,8 +38,13 @@ class TraceStore:
         latest_path.write_text(json.dumps(sanitized, indent=2), encoding="utf-8")
 
         if save_as_golden:
-            golden_path = self.golden_dir / f"golden_{run_trace.workflow_id.lower()}.json"
-            golden_path.write_text(json.dumps(sanitized, indent=2), encoding="utf-8")
+            try:
+                golden_path = self.golden_dir / f"golden_{run_trace.workflow_id.lower()}.json"
+                golden_path.write_text(json.dumps(sanitized, indent=2), encoding="utf-8")
+            except OSError as exc:
+                logger.warning(
+                    f"Could not persist golden trace to {self.golden_dir} ({exc}); continuing with run trace."
+                )
 
         logger.info(
             f"Saved deterministic run trace to {out_path}",

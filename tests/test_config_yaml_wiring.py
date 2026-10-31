@@ -31,7 +31,7 @@ def test_yaml_file_provides_defaults_and_env_overrides(
     monkeypatch.setenv("MUSEPILOT_CONFIG_YAML_PATH", str(yaml_path))
     monkeypatch.setenv("MUSEPILOT_DISPLAY_DPI_SCALE", "3.0")
 
-    settings = MusePilotSettings()
+    settings = MusePilotSettings(_env_file=None)
 
     assert settings.config_yaml_path == yaml_path
     assert settings.planner_temperature == 0.0
@@ -46,7 +46,7 @@ def test_missing_yaml_falls_back_to_builtin_defaults(
     """Prove a missing YAML file degrades gracefully to built-in defaults."""
     monkeypatch.setenv("MUSEPILOT_CONFIG_YAML_PATH", str(tmp_path / "does_not_exist.yaml"))
 
-    settings = MusePilotSettings()
+    settings = MusePilotSettings(_env_file=None)
 
     assert settings.planner_temperature == 0.1
     assert settings.verifier_min_roi_pixel_delta == 0.015
