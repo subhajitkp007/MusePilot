@@ -136,10 +136,10 @@ class RateLimitMiddleware:
         normalized_path = raw_path.rstrip("/")
         method = scope.get("method", "GET").upper()
 
-        # Explicitly exempt health check endpoints (/api/health, /health) from all rate limits
-        # ensuring infrastructure probes, container orchestrators, and HUD heartbeats are never throttled.
+        # Explicitly exempt health check endpoints, live mirror streaming, and static assets from rate limits.
+        # Live mirror streams continuous video at 4-10 FPS and must never consume general API read quota.
         if (
-            normalized_path in ("/api/health", "/health")
+            normalized_path in ("/api/health", "/health", "/api/frames/live")
             or normalized_path == ""
             or normalized_path.startswith("/_stcore")
             or normalized_path.startswith("/assets")
