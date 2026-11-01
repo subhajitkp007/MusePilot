@@ -49,11 +49,11 @@ class MetricsRow extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) => GridView.count(
         crossAxisCount: constraints.maxWidth > 900 ? 5 : 2,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: constraints.maxWidth > 900 ? 1.6 : 1.3,
+        childAspectRatio: constraints.maxWidth > 900 ? 2.5 : 1.7,
         children: [
           MetricCard(
             label: 'Zero-coordinate invariant',

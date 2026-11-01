@@ -517,18 +517,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onSelectScenario: _onSelectScenario,
                       running: _running,
                     ),
-
-                    // Headline Performance & Telemetry KPI Row
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                      child: MetricsRow(
-                        trace: _trace,
-                        liveRecords: _running ? _liveRecords : null,
-                        dpiScale: _health?.displayDpiScale ?? 2.0,
-                        verifierName:
-                            _config?.verifierDisplayName ?? 'Verifier',
-                      ),
-                    ),
+                    const SizedBox(height: 8),
 
                     // Two-Column Mission Control & Visual Grounding Radar
                     Padding(
@@ -600,7 +589,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
+
+                    // Headline Performance & Telemetry KPI Row (Compact, Placed below Run Control & Radar)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: MetricsRow(
+                        trace: _trace,
+                        liveRecords: _running ? _liveRecords : null,
+                        dpiScale: _health?.displayDpiScale ?? 2.0,
+                        verifierName:
+                            _config?.verifierDisplayName ?? 'Verifier',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
 
                     // Step plan graph (live records light up nodes during runs)
                     if (_trace?.plan.steps.isNotEmpty ?? false)

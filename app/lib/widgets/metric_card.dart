@@ -44,38 +44,45 @@ class MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Row(
               children: [
-                Icon(icon, size: 16, color: _toneColor(context)),
-                const SizedBox(width: 6),
+                Icon(icon, size: 14, color: _toneColor(context)),
+                const SizedBox(width: 5),
                 Expanded(
                   child: Text(
                     label,
-                    style: theme.textTheme.bodySmall,
+                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 3),
             Text(
               value,
-              style: theme.textTheme.headlineSmall?.copyWith(
+              style: theme.textTheme.titleMedium?.copyWith(
                 color: _toneColor(context),
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               caption,
-              style: theme.textTheme.bodySmall,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 10,
+                color: MetaTheme.inkSecondary,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
