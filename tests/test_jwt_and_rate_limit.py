@@ -221,6 +221,30 @@ def test_jwt_auth_via_static_token_in_env():
         assert resp.status_code == 200
 
 
+def test_frontend_cookie_session_handshake_without_knowing_jwt():
+    """Verify frontend browser can authenticate transparently via HttpOnly cookie."""
+    secret = "enterprise-browser-secret-key-12345"
+    settings = MusePilotSettings(jwt_secret=secret)
+    app = create_app(settings=settings)
+    client = TestClient(app)
+
+    # 1. Frontend calls /api/auth/token (or loads index.html)
+    resp = client.get("/api/auth/token")
+    assert resp.status_code == 200
+    assert "musepilot_jwt" in resp.cookies
+
+    # 2. Frontend calls POST /api/runs using the cookie without knowing/passing JWT header
+    mock_trace = MagicMock()
+    mock_trace.model_dump.return_value = {"trace_id": "cookie_trace", "status": "COMPLETED"}
+
+    with patch("musepilot.server.app._execute_run_blocking") as mock_exec:
+        mock_exec.return_value = mock_trace
+        # TestClient automatically includes cookies received in step 1
+        resp = client.post("/api/runs", json={"workflow_id": "w1"})
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "COMPLETED"
+
+
 def test_websocket_rate_limit_rejection():
     """Verify WebSocket connections enforce mutation rate limit quota."""
     from musepilot.security import GLOBAL_RATE_LIMITER

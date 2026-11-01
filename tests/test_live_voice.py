@@ -19,6 +19,7 @@ from musepilot.voice.transcribe_client import (
 )
 
 client = TestClient(create_app())
+client.get("/api/auth/token")
 
 
 def test_extract_transcript_reads_shapes() -> None:

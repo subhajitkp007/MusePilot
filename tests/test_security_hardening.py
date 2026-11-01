@@ -139,7 +139,10 @@ def test_cors_origin_restriction():
 def test_audio_upload_size_limit_rejection(tmp_path: Path):
     """Verify audio uploads exceeding max_upload_bytes are rejected with 413."""
     custom_settings = MusePilotSettings(
-        max_upload_bytes=1024 * 1024  # Tight 1MB cap for testing
+        max_upload_bytes=1024 * 1024,  # Tight 1MB cap for testing
+        api_token="",
+        jwt_secret="",
+        jwt_token="",
     )
     app = create_app(settings=custom_settings)
     client = TestClient(app)

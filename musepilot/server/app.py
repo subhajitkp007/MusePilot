@@ -120,8 +120,54 @@ class SecurityHeadersMiddleware:
         await self.app(scope, receive, send_with_security_headers)
 
 
-def _extract_token(headers: Any, query_params: Any) -> str | None:
-    """Extract bearer/api-key/query token from headers or query parameters."""
+class JWTSessionCookieMiddleware:
+    """Issue HttpOnly session JWT cookie so browsers loading the HUD need zero manual token knowledge."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        from musepilot.security import generate_jwt
+
+        request = Request(scope)
+        settings = getattr(request.app.state, "settings", None) or get_settings()
+        jwt_sec = getattr(settings, "jwt_secret", "")
+        jwt_tok = getattr(settings, "jwt_token", "")
+
+        path = scope.get("path", "")
+        is_ui_entrypoint = path in ("/", "/index.html", "/api/auth/token")
+        has_cookie = "musepilot_jwt" in request.cookies
+
+        async def send_with_session_cookie(message: Any) -> None:
+            if message["type"] == "http.response.start":
+                if is_ui_entrypoint and not has_cookie and (jwt_sec or jwt_tok):
+                    token_to_set = jwt_tok
+                    if not token_to_set and jwt_sec:
+                        token_to_set = generate_jwt(
+                            payload={"sub": "hud-operator", "role": "operator", "iss": "musepilot"},
+                            secret=jwt_sec,
+                            expires_in_seconds=86400 * 30,
+                        )
+                    if token_to_set:
+                        headers = list(message.get("headers", []))
+                        cookie_hdr = f"musepilot_jwt={token_to_set}; Path=/; SameSite=Lax; HttpOnly"
+                        headers.append((b"set-cookie", cookie_hdr.encode("latin1")))
+                        message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_with_session_cookie)
+
+
+def _extract_token(
+    headers: Any,
+    query_params: Any,
+    cookies: dict[str, str] | None = None,
+) -> str | None:
+    """Extract bearer/api-key/query/cookie token."""
     auth_header = headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         return auth_header[7:].strip()
@@ -131,6 +177,8 @@ def _extract_token(headers: Any, query_params: Any) -> str | None:
     query_token = query_params.get("token", "").strip()
     if query_token:
         return query_token
+    if cookies and "musepilot_jwt" in cookies:
+        return cookies["musepilot_jwt"].strip()
     return None
 
 
@@ -176,14 +224,14 @@ def _is_token_authorized(token: str | None, settings: Any) -> bool:
 def _verify_auth(request: Request) -> bool:
     """Verify request authorization against JWT or API token configuration."""
     settings = getattr(request.app.state, "settings", None) or get_settings()
-    token = _extract_token(request.headers, request.query_params)
+    token = _extract_token(request.headers, request.query_params, request.cookies)
     return _is_token_authorized(token, settings)
 
 
 def _verify_ws_auth(websocket: WebSocket) -> bool:
     """Verify WebSocket authorization against JWT or API token configuration."""
     settings = getattr(websocket.app.state, "settings", None) or get_settings()
-    token = _extract_token(websocket.headers, websocket.query_params)
+    token = _extract_token(websocket.headers, websocket.query_params, websocket.cookies)
     return _is_token_authorized(token, settings)
 
 
@@ -933,10 +981,35 @@ async def _drain_spans(websocket: WebSocket, sent_span_ids: set[str]) -> None:
             await websocket.send_json({"type": "span", "span": span.to_otel_dict()})
 
 
+async def get_auth_token(request: Request) -> JSONResponse:
+    """Return an active session JWT for frontend auto-handshake."""
+    from musepilot.security import generate_jwt
+
+    settings = getattr(request.app.state, "settings", None) or get_settings()
+    jwt_sec = getattr(settings, "jwt_secret", "")
+    jwt_tok = getattr(settings, "jwt_token", "")
+
+    token = jwt_tok
+    if not token and jwt_sec:
+        token = generate_jwt(
+            payload={"sub": "hud-operator", "role": "operator", "iss": "musepilot"},
+            secret=jwt_sec,
+            expires_in_seconds=86400 * 30,
+        )
+
+    if not token:
+        return JSONResponse({"token": "", "auth_required": False})
+
+    response = JSONResponse({"token": token, "token_type": "Bearer", "auth_required": True})
+    response.set_cookie("musepilot_jwt", token, path="/", samesite="lax", httponly=True)
+    return response
+
+
 def create_app(settings: Any | None = None) -> Starlette:
     """Build the MusePilot HUD API application."""
     active_settings = settings or get_settings()
     routes: list[Route | WebSocketRoute | Mount] = [
+        Route("/api/auth/token", get_auth_token),
         Route("/api/health", get_health),
         Route("/api/config", get_config),
         Route("/api/workflows", list_workflows),
@@ -966,6 +1039,7 @@ def create_app(settings: Any | None = None) -> Starlette:
         allow_credentials=True,
     )
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(JWTSessionCookieMiddleware)
     app.add_middleware(
         RateLimitMiddleware,
         limiter=GLOBAL_RATE_LIMITER,
