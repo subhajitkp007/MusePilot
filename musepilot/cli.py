@@ -10,7 +10,9 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
+from musepilot.contracts.schemas import LiveModelError
 from musepilot.eval.benchmark import BenchmarkEngine
+from musepilot.execution.device import get_device_driver
 from musepilot.health.checker import run_health_check
 from musepilot.orchestrator import MusePilotOrchestrator
 from musepilot.trace import TraceStore
@@ -49,6 +51,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Pause the run after N verified steps for later resume",
     )
+    run_p.add_argument(
+        "--voice-audio",
+        type=Path,
+        default=None,
+        help="WAV file with a spoken command (required for live voice intake)",
+    )
+    run_p.add_argument(
+        "--driver",
+        choices=["simulated", "desktop", "adb"],
+        default="simulated",
+        help="Target device driver: simulated, desktop, or adb (Android)",
+    )
+    run_p.add_argument(
+        "--adb-serial",
+        type=str,
+        default=None,
+        help="Optional target Android device ADB serial",
+    )
 
     # `resume` command
     res_p = sub.add_parser("resume", help="Resume a paused workflow trace")
@@ -75,6 +95,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Pause again after reaching the given original step position",
+    )
+    res_p.add_argument(
+        "--driver",
+        choices=["simulated", "desktop", "adb"],
+        default="simulated",
+        help="Target device driver: simulated, desktop, or adb (Android)",
+    )
+    res_p.add_argument(
+        "--adb-serial",
+        type=str,
+        default=None,
+        help="Optional target Android device ADB serial",
     )
 
     # `replay` command
@@ -121,15 +153,21 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if report.passed else 1
 
     if args.command == "run":
-        orchestrator = MusePilotOrchestrator()
-        trace = orchestrator.run_workflow(
-            workflow_id=args.workflow,
-            custom_intent=args.intent,
-            use_voice_intake=(args.workflow == "w2"),
-            inject_modal_obstruction=args.inject_modal,
-            save_as_golden=True,
-            pause_after_step=args.pause_after,
-        )
+        driver = get_device_driver(args.driver, serial=args.adb_serial)
+        orchestrator = MusePilotOrchestrator(device_driver=driver)
+        try:
+            trace = orchestrator.run_workflow(
+                workflow_id=args.workflow,
+                custom_intent=args.intent,
+                use_voice_intake=(args.workflow == "w2"),
+                inject_modal_obstruction=args.inject_modal,
+                save_as_golden=True,
+                pause_after_step=args.pause_after,
+                voice_audio=args.voice_audio,
+            )
+        except LiveModelError as exc:
+            print(f"Live model error: {exc}", file=sys.stderr)
+            return 2
         summary = {
             "trace_id": trace.trace_id,
             "workflow_id": trace.workflow_id,
@@ -142,7 +180,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "resume":
-        orchestrator = MusePilotOrchestrator()
+        driver = get_device_driver(args.driver, serial=args.adb_serial)
+        orchestrator = MusePilotOrchestrator(device_driver=driver)
         trace = orchestrator.resume_workflow(
             trace_id=args.trace_id,
             new_intent=args.intent,

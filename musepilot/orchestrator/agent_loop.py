@@ -20,6 +20,7 @@ from musepilot.contracts.schemas import (
     VoiceTranscript,
 )
 from musepilot.execution import ActionExecutor
+from musepilot.execution.device import DeviceDriver
 from musepilot.perception import (
     CapturedFrame,
     SAM31PerceptionClient,
@@ -49,8 +50,13 @@ class _StepOutcome:
 class MusePilotOrchestrator:
     """Coordinates SAM 3.1 grounding, Muse Spark planning, execution, and open-weight verification."""
 
-    def __init__(self, trace_store: TraceStore | None = None) -> None:
+    def __init__(
+        self,
+        trace_store: TraceStore | None = None,
+        device_driver: DeviceDriver | None = None,
+    ) -> None:
         self.settings = get_settings()
+        self.device_driver = device_driver
         self.capture_engine = ScreenCaptureEngine(dpi_scale=self.settings.display_dpi_scale)
         self.sam_client = SAM31PerceptionClient()
         self.som_renderer = SetOfMarkRenderer()
@@ -68,6 +74,7 @@ class MusePilotOrchestrator:
         inject_modal_obstruction: bool = False,
         save_as_golden: bool = True,
         pause_after_step: int | None = None,
+        voice_audio: Path | None = None,
     ) -> RunTrace:
         """Execute a complete closed-loop workflow with verification and self-healing."""
         trace_id = secrets.token_hex(6)
@@ -83,7 +90,7 @@ class MusePilotOrchestrator:
         voice_transcript: VoiceTranscript | None = None
         if use_voice_intake:
             voice_transcript = self.voice_client.transcribe_command(
-                workflow_id=wf, trace_id=trace_id
+                workflow_id=wf, audio_path=voice_audio, trace_id=trace_id
             )
             intent = custom_intent or voice_transcript.transcript
         else:
@@ -92,9 +99,12 @@ class MusePilotOrchestrator:
             )
 
         # 2. Initial Perception (Capture -> SAM 3.1 Segmentation -> SoM Overlay)
-        current_frame = self.capture_engine.render_canvas_state(
-            workflow_id=wf, state_label="initial"
-        )
+        if self.device_driver is not None:
+            current_frame = self.device_driver.capture_frame(state_label="initial")
+        else:
+            current_frame = self.capture_engine.render_canvas_state(
+                workflow_id=wf, state_label="initial"
+            )
         initial_mask_set = self.sam_client.segment_frame(
             frame=current_frame, workflow_id=wf, trace_id=trace_id
         )
@@ -213,9 +223,12 @@ class MusePilotOrchestrator:
             extra={"trace_id": trace.trace_id, "workflow_id": wf, "component": "orchestrator"},
         )
 
-        current_frame = self.capture_engine.render_canvas_state(
-            workflow_id=wf, state_label=trace.resume_state_label
-        )
+        if self.device_driver is not None:
+            current_frame = self.device_driver.capture_frame(state_label=trace.resume_state_label)
+        else:
+            current_frame = self.capture_engine.render_canvas_state(
+                workflow_id=wf, state_label=trace.resume_state_label
+            )
         active_mask_set = self.sam_client.segment_frame(
             frame=current_frame, workflow_id=wf, trace_id=trace.trace_id
         )
@@ -322,6 +335,7 @@ class MusePilotOrchestrator:
                 pre_frame=frame,
                 next_state_label=next_state,
                 trace_id=trace_id,
+                device_driver=self.device_driver,
             )
 
             target_mask = masks.get_mask(step.target_mask_id)
@@ -493,6 +507,7 @@ class MusePilotOrchestrator:
             pre_frame=post_frame,
             next_state_label="step_1_modal_dismissed",
             trace_id=trace_id,
+            device_driver=self.device_driver,
         )
         dismiss_mask = obstructed_mask_set.get_mask(dismiss_step.target_mask_id)
         if dismiss_mask is None:

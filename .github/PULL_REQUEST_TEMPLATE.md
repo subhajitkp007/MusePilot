@@ -17,7 +17,7 @@ make health
 - [ ] `planning` — Muse Spark Multimodal StepDAG Planner (`M3`)
 - [ ] `verification` — Muse Spark Open (`meta-models/muse-spark-open-1026`) Closed-Loop Verifier (`M4`, `M8`)
 - [ ] `voice` — Muse Voice Transcribe Intake (`M5`)
-- [ ] `dashboard` — Streamlit Visual HUD & Telemetry Inspector (`M6`)
+- [ ] `server` + `app/` — HUD API & Flutter Visual HUD Inspector (`M6`)
 - [ ] `trace` — Deterministic Trace Store & Golden Replay Engine (`M7`)
 - [ ] `orchestrator` — Self-Healing State Machine & Metrics (`M9`, `S1`)
 

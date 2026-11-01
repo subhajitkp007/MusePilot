@@ -55,3 +55,33 @@ jobs:
         run: |
           pytest tests/ -v
 
+  flutter-hud:
+    name: Flutter HUD Analyze, Test & Web Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter 3.47.9
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+
+      - name: Install HUD dependencies
+        run: flutter pub get
+
+      - name: Analyze HUD
+        run: flutter analyze
+
+      - name: Test HUD
+        run: flutter test
+
+      - name: Build HUD web bundle
+        run: flutter build web --release
+

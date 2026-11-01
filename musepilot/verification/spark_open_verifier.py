@@ -4,18 +4,29 @@
 
 from __future__ import annotations
 
-import json
+import base64
+import io
 import time
 
 import httpx
 import numpy as np
+from PIL import Image
 
 from musepilot.config import get_settings
-from musepilot.contracts.schemas import MaskMetadata, StepNode, VerificationVerdict
+from musepilot.contracts.repair import extract_json_object
+from musepilot.contracts.schemas import (
+    LiveModelError,
+    MaskMetadata,
+    StepNode,
+    VerificationVerdict,
+)
 from musepilot.perception.capture import CapturedFrame
 from musepilot.telemetry import GLOBAL_TELEMETRY, get_logger
 
 logger = get_logger("musepilot.verification.spark_open")
+
+_ROI_PAD_FACTOR = 1.5
+_ROI_MAX_DIM = 512
 
 
 def compute_roi_pixel_delta(
@@ -38,6 +49,39 @@ def compute_roi_pixel_delta(
 
     diff_full = np.abs(pre_arr - post_arr)
     return round(float(np.mean(diff_full > 12.0)), 4)
+
+
+def crop_roi(
+    frame: CapturedFrame,
+    bbox: tuple[int, int, int, int],
+    pad_factor: float = _ROI_PAD_FACTOR,
+    max_dim: int = _ROI_MAX_DIM,
+) -> Image.Image:
+    """Crop a padded region around a mask box, clamped to the frame."""
+    width, height = frame.image.size
+    x1, y1, x2, y2 = bbox
+    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+    half_w = max(1.0, (x2 - x1) * pad_factor / 2)
+    half_h = max(1.0, (y2 - y1) * pad_factor / 2)
+    box = (
+        max(0, int(cx - half_w)),
+        max(0, int(cy - half_h)),
+        min(width, int(cx + half_w)),
+        min(height, int(cy + half_h)),
+    )
+    crop = frame.image.crop(box)
+    longest = max(crop.size)
+    if longest > max_dim:
+        scale = max_dim / longest
+        crop = crop.resize((max(1, int(crop.size[0] * scale)), max(1, int(crop.size[1] * scale))))
+    return crop
+
+
+def encode_image_b64(image: Image.Image) -> str:
+    """Encode a PIL image as base64 PNG for vision payloads."""
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 class SparkOpenVerifier:
@@ -72,8 +116,17 @@ class SparkOpenVerifier:
             full_delta = compute_roi_pixel_delta(pre_frame, post_frame, None)
             effective_delta = max(roi_delta, full_delta)
 
-            if self.settings.execution_mode == "live" and self.settings.partner_api_key:
-                verdict = self._call_partner_verifier_api(step, effective_delta, post_frame)
+            credentials = self._live_credentials()
+            if self.settings.execution_mode == "live" and credentials is not None:
+                verdict = self._call_live_verifier_api(
+                    step,
+                    target_mask,
+                    effective_delta,
+                    pre_frame,
+                    post_frame,
+                    credentials,
+                    trace_id,
+                )
             else:
                 verdict = self._evaluate_deterministic_verdict(step, effective_delta, post_frame)
 
@@ -97,62 +150,153 @@ class SparkOpenVerifier:
             span.attributes["roi_pixel_delta"] = verdict.roi_pixel_delta
             return verdict
 
-    def _call_partner_verifier_api(
+    def _live_credentials(self) -> tuple[str, str, str, str] | None:
+        """Resolve (base_url, api_key, model_id, provider) for the active backend."""
+        if self.settings.verifier_backend == "meta":
+            if not self.settings.meta_api_key:
+                return None
+            return (
+                self.settings.meta_api_base_url,
+                self.settings.meta_api_key,
+                self.settings.meta_verifier_model_id,
+                "meta",
+            )
+        if not self.settings.partner_api_key:
+            return None
+        return (
+            self.settings.partner_base_url,
+            self.settings.partner_api_key,
+            self.settings.verifier_model_id,
+            self.settings.partner_provider,
+        )
+
+    def _call_live_verifier_api(
         self,
         step: StepNode,
+        target_mask: MaskMetadata,
         roi_delta: float,
+        pre_frame: CapturedFrame,
         post_frame: CapturedFrame,
+        credentials: tuple[str, str, str, str],
+        trace_id: str = "local",
     ) -> VerificationVerdict:
-        """Call Baseten / Modal / Fireworks endpoint serving `meta-models/muse-spark-open-1026`."""
+        """Judge a transition on the configured live backend (partner or Meta)."""
+        base_url, api_key, model_id, provider = credentials
         prompt_template = self.load_prompt_template()
         filled_prompt = (
             prompt_template.replace("{operation}", step.operation.value)
             .replace("{target_mask_id}", str(step.target_mask_id))
             .replace("{expected_outcome}", step.expected_outcome)
             .replace("{roi_change_ratio}", f"{roi_delta:.4f}")
+            .replace("meta-models/muse-spark-open-1026", model_id)
         )
+        pre_crop = encode_image_b64(crop_roi(pre_frame, target_mask.bbox))
+        post_crop = encode_image_b64(crop_roi(post_frame, target_mask.bbox))
         headers = {
-            "Authorization": f"Bearer {self.settings.partner_api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
         payload = {
-            "model": self.settings.verifier_model_id,
+            "model": model_id,
             "temperature": 0.0,
+            "max_tokens": self.settings.verifier_max_tokens,
+            "response_format": {"type": "json_object"},
             "messages": [
                 {"role": "system", "content": filled_prompt},
                 {
                     "role": "user",
-                    "content": (
-                        f"Post-action state label: {post_frame.state_label}. "
-                        f"Measured pixel delta: {roi_delta:.4f}. Return JSON verdict."
-                    ),
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                f"Pre-action ROI followed by post-action ROI "
+                                f"(Mask #{step.target_mask_id}). "
+                                f"Measured pixel delta: {roi_delta:.4f}. "
+                                f"Return the JSON verdict."
+                            ),
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{pre_crop}"},
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{post_crop}"},
+                        },
+                    ],
                 },
             ],
         }
+        content = self._post_verdict(payload, headers, base_url, trace_id)
         try:
-            with httpx.Client(timeout=self.settings.api_timeout_seconds) as client:
+            return self._verdict_from_json(
+                extract_json_object(content), roi_delta, model_id, provider
+            )
+        except (LiveModelError, ValueError) as exc:
+            logger.warning(f"Verifier reply failed validation ({exc}); retrying once.")
+        payload["messages"].append({"role": "assistant", "content": content})
+        payload["messages"].append(
+            {
+                "role": "user",
+                "content": (
+                    "Your previous reply was not a valid verdict JSON object. "
+                    "Reply with ONLY the JSON object, no prose, no fences."
+                ),
+            }
+        )
+        content = self._post_verdict(payload, headers, base_url, trace_id)
+        try:
+            return self._verdict_from_json(
+                extract_json_object(content), roi_delta, model_id, provider
+            )
+        except (LiveModelError, ValueError) as exc:
+            raise LiveModelError(f"Verifier failed to emit a valid verdict: {exc}") from exc
+
+    def _post_verdict(
+        self, payload: dict, headers: dict[str, str], base_url: str, trace_id: str
+    ) -> str:
+        """POST one verdict completion and return the assistant content."""
+        try:
+            with httpx.Client(timeout=self.settings.api_timeout_seconds * 4) as client:
                 response = client.post(
-                    f"{self.settings.partner_base_url.rstrip('/')}/chat/completions",
+                    f"{base_url.rstrip('/')}/chat/completions",
                     headers=headers,
                     json=payload,
                 )
                 response.raise_for_status()
-                raw_json = json.loads(response.json()["choices"][0]["message"]["content"])
-                return VerificationVerdict(
-                    model_id=self.settings.verifier_model_id,
-                    partner_provider=self.settings.partner_provider,
-                    passed=bool(raw_json.get("passed", True)),
-                    confidence=float(raw_json.get("confidence", 0.96)),
-                    roi_pixel_delta=roi_delta,
-                    observed_change=str(raw_json.get("observed_change", "State verified")),
-                    obstruction_detected=bool(raw_json.get("obstruction_detected", False)),
-                    retry_hint=raw_json.get("retry_hint"),
-                )
-        except Exception as exc:
-            logger.warning(
-                f"Partner verifier endpoint fallback triggered ({exc}); using local structural verifier."
+                choice = response.json()["choices"][0]
+                content = choice["message"]["content"]
+                finish_reason = choice.get("finish_reason", "unknown")
+        except httpx.HTTPStatusError as exc:
+            raise LiveModelError(
+                f"Verifier request rejected (HTTP {exc.response.status_code})."
+            ) from exc
+        except (httpx.HTTPError, KeyError, IndexError, TypeError) as exc:
+            raise LiveModelError(f"Verifier request failed: {exc}") from exc
+        if not content:
+            raise LiveModelError(
+                f"Verifier returned empty content (finish_reason={finish_reason})."
             )
-            return self._evaluate_deterministic_verdict(step, roi_delta, post_frame)
+        logger.info(
+            "Live verifier reply received",
+            extra={"trace_id": trace_id, "component": "verification.muse_spark_open"},
+        )
+        return str(content)
+
+    def _verdict_from_json(
+        self, raw: dict, roi_delta: float, model_id: str, provider: str
+    ) -> VerificationVerdict:
+        """Validate a raw verdict dict into a VerificationVerdict."""
+        return VerificationVerdict(
+            model_id=model_id,
+            partner_provider=provider,
+            passed=bool(raw.get("passed", True)),
+            confidence=float(raw.get("confidence", 0.96)),
+            roi_pixel_delta=roi_delta,
+            observed_change=str(raw.get("observed_change", "State verified")),
+            obstruction_detected=bool(raw.get("obstruction_detected", False)),
+            retry_hint=raw.get("retry_hint"),
+        )
 
     def _evaluate_deterministic_verdict(
         self,

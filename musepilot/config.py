@@ -26,10 +26,13 @@ CONFIG_YAML_PATH_ENV_VAR = "MUSEPILOT_CONFIG_YAML_PATH"
 # Only mapped keys are honored; anything else in the YAML is ignored.
 _YAML_FIELD_MAP: tuple[tuple[tuple[str, ...], str], ...] = (
     (("models", "sam", "model_id"), "sam_model_id"),
+    (("models", "sam", "concepts"), "sam_prompt_concepts"),
     (("models", "planner", "model_id"), "planner_model_id"),
     (("models", "planner", "prompt_file"), "planner_prompt_path"),
     (("models", "planner", "temperature"), "planner_temperature"),
     (("models", "verifier", "model_id"), "verifier_model_id"),
+    (("models", "verifier", "backend"), "verifier_backend"),
+    (("models", "verifier", "meta_model_id"), "meta_verifier_model_id"),
     (("models", "verifier", "partner_name"), "partner_provider"),
     (("models", "verifier", "prompt_file"), "verifier_prompt_path"),
     (("models", "verifier", "min_roi_pixel_delta"), "verifier_min_roi_pixel_delta"),
@@ -44,6 +47,9 @@ _YAML_FIELD_MAP: tuple[tuple[tuple[str, ...], str], ...] = (
     ),
     (("telemetry", "log_level"), "log_level"),
     (("telemetry", "log_format"), "log_format"),
+    (("server", "host"), "server_host"),
+    (("server", "port"), "server_port"),
+    (("execution", "allow_live_input"), "allow_live_input"),
 )
 
 _PATH_FIELDS = frozenset({"planner_prompt_path", "verifier_prompt_path"})
@@ -118,11 +124,24 @@ class MusePilotSettings(BaseSettings):
         description="Meta Model API base URL",
     )
     sam_model_id: str = Field(
-        default="meta-models/sam-3.1",
+        default="sam-3.1",
         description="SAM 3.1 segmentation model identifier",
     )
+    sam_prompt_concepts: list[str] = Field(
+        default=[
+            "button",
+            "text field",
+            "slider",
+            "toggle switch",
+            "icon",
+            "menu",
+            "rectangle",
+            "bar",
+        ],
+        description="UI concept prompts issued to SAM 3.1 per screen (merged with dedup)",
+    )
     planner_model_id: str = Field(
-        default="meta-models/muse-spark",
+        default="muse-spark-1.3",
         description="Muse Spark multimodal planner model identifier",
     )
     planner_temperature: float = Field(
@@ -131,8 +150,14 @@ class MusePilotSettings(BaseSettings):
         le=2.0,
         description="Sampling temperature for live Muse Spark planner calls",
     )
+    planner_max_tokens: int = Field(
+        default=8192,
+        ge=256,
+        le=32000,
+        description="Completion budget for planner calls (reasoning models consume thinking tokens)",
+    )
     voice_model_id: str = Field(
-        default="meta-models/muse-voice-transcribe",
+        default="muse-voice-transcribe-1.0",
         description="Muse Voice Transcribe model identifier",
     )
 
@@ -150,6 +175,14 @@ class MusePilotSettings(BaseSettings):
         default="meta-models/muse-spark-open-1026",
         description="Official hackathon open-weight model ID for verification",
     )
+    verifier_backend: Literal["partner", "meta"] = Field(
+        default="partner",
+        description="Live verifier backend: partner open weights or Meta API only",
+    )
+    meta_verifier_model_id: str = Field(
+        default="muse-spark-1.3",
+        description="Meta API model used when verifier_backend is 'meta'",
+    )
     verifier_min_roi_pixel_delta: float = Field(
         default=0.015,
         ge=0.0,
@@ -161,6 +194,12 @@ class MusePilotSettings(BaseSettings):
         ge=0.0,
         le=1.0,
         description="Minimum verifier confidence to pass a transition",
+    )
+    verifier_max_tokens: int = Field(
+        default=2048,
+        ge=256,
+        le=8000,
+        description="Completion budget for verifier verdicts (reasoning headroom)",
     )
 
     # 3. Execution, Display & Guardrails
@@ -185,6 +224,15 @@ class MusePilotSettings(BaseSettings):
     )
     api_timeout_seconds: float = Field(default=15.0, gt=0.0)
     require_destructive_confirmation: bool = Field(default=True)
+    allow_live_input: bool = Field(
+        default=False,
+        description="Opt-in gate: allow real OS input dispatch on desktop/mobile drivers",
+    )
+    server_host: str = Field(
+        default="127.0.0.1",
+        description="HUD API bind address (override via MUSEPILOT_SERVER_HOST)",
+    )
+    server_port: int = Field(default=8501, ge=1, le=65535, description="HUD API bind port")
 
     # 4. Prompt Versioning Paths
     planner_prompt_path: Path = Field(default=PROJECT_ROOT / "prompts" / "planner_som_v1.txt")

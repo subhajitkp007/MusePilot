@@ -1,0 +1,35 @@
+{
+    "name": "MusePilot HUD",
+    "short_name": "MusePilot",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#F0F2F5",
+    "theme_color": "#0064E0",
+    "description": "MusePilot cross-platform HUD: Android, iOS, web, macOS, Windows, Linux.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

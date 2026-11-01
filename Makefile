@@ -1,13 +1,13 @@
 # Copyright 2026 MusePilot Authors
 # Licensed under the Apache License, Version 2.0
 
-.PHONY: help setup lint format test health demo-w1 demo-w2 replay-w1 replay-w2 dashboard docker-build docker-up docker-down clean
+.PHONY: help setup lint format test health demo-w1 demo-w2 replay-w1 replay-w2 server app-analyze app-test app-web docker-build docker-up docker-down clean
 
 PYTHON := .venv/bin/python
 PIP := .venv/bin/pip
 RUFF := .venv/bin/ruff
 PYTEST := .venv/bin/pytest
-STREAMLIT := .venv/bin/streamlit
+FLUTTER ?= flutter
 
 help: ## Show this help menu
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -45,8 +45,17 @@ replay-w2: ## Replay golden trace for Workflow 2 deterministically
 eval: ## Run quantitative evaluation benchmark over historical traces
 	$(PYTHON) -m musepilot.cli eval
 
-dashboard: ## Launch the real-time MusePilot HUD & Telemetry Dashboard
-	$(STREAMLIT) run musepilot/dashboard/app.py
+server: ## Launch the HUD API server for Flutter clients (http://localhost:8501)
+	$(PYTHON) -m musepilot.server.app
+
+app-analyze: ## Analyze the Flutter HUD app
+	cd app && $(FLUTTER) analyze
+
+app-test: ## Run the Flutter HUD test suite
+	cd app && $(FLUTTER) test
+
+app-web: ## Build the Flutter web HUD into the API server static dir
+	cd app && $(FLUTTER) build web --release --output ../musepilot/server/static/web
 
 docker-build: ## Build production Docker image
 	docker compose build

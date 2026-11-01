@@ -19,7 +19,7 @@ body:
         - verification (Muse Spark Open 1026)
         - voice (Muse Voice Transcribe)
         - orchestrator (Self-Healing Loop)
-        - dashboard (Streamlit HUD)
+        - hud (Flutter app / API server)
         - docker / ci
     validations:
       required: true

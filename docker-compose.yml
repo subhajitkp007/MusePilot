@@ -4,7 +4,7 @@
 # MusePilot Multi-Service Docker Compose Stack
 # Services:
 #   1. musepilot-agent: Core Orchestrator & CLI runner (SAM 3.1 + Muse Spark + Open Verifier)
-#   2. musepilot-dashboard: Real-Time Visual HUD & Telemetry Dashboard (Streamlit)
+#   2. musepilot-dashboard: HUD API server (Starlette) + Flutter web bundle when built via `make app-web`
 #   3. musepilot-canvas-demo: Self-contained HTML5 Canvas Simulation Target Server (W1/W2)
 #   4. jaeger: OpenTelemetry Distributed Tracing & Span Collector (Observability)
 # ==============================================================================
@@ -58,6 +58,8 @@ services:
       - MUSEPILOT_TRACE_DIR=/app/traces
       - MUSEPILOT_LOG_DIR=/app/logs
       - MUSEPILOT_TELEMETRY_ENABLED=true
+      - MUSEPILOT_SERVER_HOST=0.0.0.0
+      - MUSEPILOT_SERVER_PORT=8501
     ports:
       - "8501:8501"
     volumes:
@@ -65,10 +67,9 @@ services:
       - ./traces:/app/traces
       - ./logs:/app/logs
       - ./demo/golden_traces:/app/demo/golden_traces
-    entrypoint: ["streamlit", "run", "musepilot/dashboard/app.py"]
-    command: ["--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true"]
+    entrypoint: ["python", "-m", "musepilot.server.app"]
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/api/health')"]
       interval: 20s
       timeout: 5s
       retries: 3

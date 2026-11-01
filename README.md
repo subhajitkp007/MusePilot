@@ -87,8 +87,11 @@ make demo-w1
 # 4. Execute Workflow 2 (Voice Cross-App + Autonomous Self-Healing Modal Recovery)
 make demo-w2
 
-# 5. Launch Interactive Streamlit HUD & Telemetry Dashboard
-make dashboard
+# 5. Launch the HUD API server for Flutter clients
+make server
+
+# 6. Run the cross-platform HUD (Android, iOS, web, macOS, Windows, Linux)
+cd app && flutter run -d chrome --dart-define=MUSEPILOT_API_BASE=http://localhost:8501
 ```
 
 ### Option B: Production Docker Compose Stack
@@ -99,7 +102,7 @@ Runs the complete multi-service stack (`musepilot-agent`, `musepilot-dashboard` 
 docker compose up --build -d
 ```
 
-* **MusePilot Visual HUD:** http://localhost:8501
+* **MusePilot HUD API:** http://localhost:8501 (`/api/*`, `/ws/runs`; serves the Flutter web HUD at `/` after `make app-web`)
 * **Pure HTML5 Canvas Target (`0 DOM Nodes`):** http://localhost:8088/canvas_app.html
 * **Jaeger OpenTelemetry Tracing UI:** http://localhost:16686
 
@@ -132,8 +135,9 @@ MusePilot/
 │   ├── orchestrator/          # Closed-loop state machine & self-healing recovery policy
 │   ├── trace/                 # Deterministic JSON trace recorder & golden-trace replayer
 │   ├── health/                # Pre-flight calibration & model compliance checker
-│   ├── dashboard/             # Real-time Streamlit HUD & Telemetry viewer
+│   ├── server/                # Starlette HUD API + WebSocket run streaming (`/api/*`, `/ws/runs`)
 │   └── cli.py                 # Unified CLI (`run`, `replay`, `health`)
+├── app/                       # Flutter HUD (Android, iOS, web, macOS, Windows, Linux)
 ├── prompts/                   # Versioned prompt templates (`planner_som_v1.txt`, `verifier_eval_v1.txt`)
 ├── configs/                   # Non-secret runtime defaults (`default_config.yaml`)
 ├── demo/                      # Pure HTML5 Canvas target (`canvas_app.html`) & golden traces

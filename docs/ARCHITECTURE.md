@@ -51,10 +51,11 @@ Current computer-use agents (like raw OS-world agents or standard VLMs) attempt 
                                  |
                                  v
                        +-------------------+
-                       | REAL-TIME HUD /   |
-                       | STREAMLIT DASHBRD |
+                       | HUD API + FLUTTER |
                        | Neon Masks, Plan, |
                        | Verification Check|
+                       | Android/iOS/Web / |
+                       | macOS/Desktop     |
                        +-------------------+
 ```
 

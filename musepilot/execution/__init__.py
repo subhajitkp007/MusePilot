@@ -7,8 +7,11 @@ from __future__ import annotations
 from musepilot.execution.device import (
     AdbDeviceDriver,
     DesktopDeviceDriver,
+    DeviceDispatchError,
     DeviceDriver,
+    LiveInputDisabledError,
     get_device_driver,
+    require_live_input,
 )
 from musepilot.execution.executor import (
     ActionExecutor,
@@ -20,8 +23,11 @@ __all__ = [
     "ActionExecutor",
     "AdbDeviceDriver",
     "DesktopDeviceDriver",
+    "DeviceDispatchError",
     "DeviceDriver",
     "GuardrailViolationError",
+    "LiveInputDisabledError",
     "get_device_driver",
+    "require_live_input",
     "translate_frame_px_to_os_logical",
 ]

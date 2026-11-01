@@ -86,7 +86,7 @@ To eliminate scope creep and ensure 100% reliability, the hackathon MVP targets 
 
 ### Day 3: Nov 3 — Voice Intake, HUD Dashboard, & Rehearsals (M5, M6, M9, S1, S2)
 - [ ] Implement `VoiceIntake` using Meta `Muse Voice Transcribe` client.
-- [ ] Build lightweight real-time HUD / Streamlit visual overlay displaying:
+- [ ] Build cross-platform Flutter HUD + Starlette API server displaying:
   - Live marked screen feed with glowing target indicator.
   - Step DAG progress bar and active task card.
   - Real-time green verification checkmarks and latency meters.

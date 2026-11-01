@@ -7,3 +7,4 @@ from __future__ import annotations
 from musepilot.eval.benchmark import BenchmarkEngine, BenchmarkReport, WorkflowStats
 
 __all__ = ["BenchmarkEngine", "BenchmarkReport", "WorkflowStats"]
+

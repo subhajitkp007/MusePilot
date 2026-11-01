@@ -6,13 +6,17 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ZeroCoordinateViolationError(ValueError):
     """Raised when a planner payload attempts to emit raw [x, y] coordinates."""
+
+
+class LiveModelError(RuntimeError):
+    """Raised when a live model call fails; live mode never silently mocks."""
 
 
 class ActionOp(str, Enum):
@@ -58,7 +62,7 @@ class MaskSet(BaseModel):
     width_px: int = Field(..., gt=0)
     height_px: int = Field(..., gt=0)
     dpi_scale: float = Field(default=2.0, gt=0.0)
-    model_id: str = Field(default="meta-models/sam-3.1")
+    model_id: str = Field(default="sam-3.1")
     cached: bool = Field(default=False)
     latency_ms: float = Field(default=0.0, ge=0.0)
     masks: list[MaskMetadata] = Field(default_factory=list)
@@ -126,7 +130,7 @@ class StepDAG(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     plan_version: str = Field(default="planner_som_v1")
-    model_id: str = Field(default="meta-models/muse-spark")
+    model_id: str = Field(default="muse-spark-1.3")
     workflow_id: str
     intent: str
     plan_summary: str
@@ -193,7 +197,7 @@ class VoiceTranscript(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    model_id: str = Field(default="meta-models/muse-voice-transcribe")
+    model_id: str = Field(default="muse-voice-transcribe-1.0")
     transcript: str
     confidence: float = Field(default=0.99, ge=0.0, le=1.0)
     audio_duration_sec: float = Field(default=2.8, ge=0.0)
@@ -246,3 +250,41 @@ class RunTrace(BaseModel):
         default=None, description="Canvas state label to resume from when paused"
     )
     metrics: MetricsSummary
+
+
+class RunRequest(BaseModel):
+    """Validated HUD request to execute a frozen closed-loop workflow."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_id: Literal["w1", "w2"] = Field(default="w1")
+    inject_modal: bool = Field(
+        default=False, description="Inject a transient blocking modal (W2 self-healing demo)"
+    )
+    driver: Literal["simulated", "desktop", "adb"] = Field(default="simulated")
+    custom_intent: str | None = Field(default=None, max_length=500)
+
+
+class WorkflowInfo(BaseModel):
+    """Frozen workflow descriptor served to cross-platform HUD clients."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    workflow_id: str
+    title: str
+    description: str
+
+
+class TraceSummary(BaseModel):
+    """Lightweight run-trace listing entry for HUD history views."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    trace_id: str
+    workflow_id: str
+    status: str
+    created_at: str
+    steps_completed: int
+    steps_planned: int
+    verification_pass_rate: float
+    self_healing_recoveries: int

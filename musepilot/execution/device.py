@@ -8,6 +8,7 @@ import io
 import shutil
 import subprocess
 import sys
+import time
 from abc import ABC, abstractmethod
 from typing import Literal
 
@@ -18,6 +19,23 @@ from musepilot.perception.capture import CapturedFrame, compute_image_hash
 from musepilot.telemetry import get_logger
 
 logger = get_logger("musepilot.execution.device")
+
+
+class LiveInputDisabledError(RuntimeError):
+    """Raised when input dispatch is attempted without the live-input opt-in."""
+
+
+class DeviceDispatchError(RuntimeError):
+    """Raised when the OS rejects an input dispatch (permissions, headless)."""
+
+
+def require_live_input() -> None:
+    """Enforce the MUSEPILOT_ALLOW_LIVE_INPUT opt-in gate for real dispatch."""
+    if not get_settings().allow_live_input:
+        raise LiveInputDisabledError(
+            "Real input dispatch is disabled; set MUSEPILOT_ALLOW_LIVE_INPUT=true "
+            "to let MusePilot control this device."
+        )
 
 
 class DeviceDriver(ABC):
@@ -116,10 +134,12 @@ class AdbDeviceDriver(DeviceDriver):
 
     def tap(self, x: float, y: float) -> None:
         """Dispatch a tap at OS logical coordinates."""
+        require_live_input()
         self._run("shell", "input", "tap", str(int(x)), str(int(y)))
 
     def swipe(self, x1: float, y1: float, x2: float, y2: float, duration_ms: int = 300) -> None:
         """Dispatch a drag between OS logical points."""
+        require_live_input()
         self._run(
             "shell",
             "input",
@@ -133,6 +153,7 @@ class AdbDeviceDriver(DeviceDriver):
 
     def text(self, value: str) -> None:
         """Type text, escaping spaces per adb input conventions."""
+        require_live_input()
         escaped = value.replace("%", "%25").replace(" ", "%s")
         self._run("shell", "input", "text", escaped)
 
@@ -177,17 +198,77 @@ class DesktopDeviceDriver(DeviceDriver):
         return self._serial
 
     def tap(self, x: float, y: float) -> None:
-        """Dispatch a mouse click at OS logical coordinates."""
+        """Click the mouse at OS logical coordinates."""
+        require_live_input()
+        from pynput.mouse import Button, Controller
+
+        try:
+            mouse = Controller()
+            mouse.position = (x, y)
+            self._verify_cursor(mouse, x, y)
+            mouse.click(Button.left, 1)
+        except DeviceDispatchError:
+            raise
+        except Exception as exc:
+            raise DeviceDispatchError(
+                f"Desktop click at ({x}, {y}) failed ({exc}); on macOS grant "
+                "Accessibility permission to your terminal."
+            ) from exc
         logger.info(f"Desktop click dispatched at logical point ({x}, {y})")
 
+    @staticmethod
+    def _verify_cursor(mouse: object, x: float, y: float) -> None:
+        """Prove the OS honored a cursor move (macOS ignores it without consent)."""
+        position = getattr(mouse, "position", None)
+        if position is None:
+            return
+        try:
+            px, py = float(position[0]), float(position[1])
+        except (TypeError, ValueError):
+            return
+        if abs(px - x) > 2 or abs(py - y) > 2:
+            raise DeviceDispatchError(
+                f"OS ignored cursor move to ({x}, {y}); on macOS grant Accessibility "
+                "permission to your terminal (System Settings > Privacy & Security)."
+            )
+
     def swipe(self, x1: float, y1: float, x2: float, y2: float, duration_ms: int = 300) -> None:
-        """Dispatch a mouse drag from (x1, y1) to (x2, y2)."""
+        """Drag the mouse from (x1, y1) to (x2, y2)."""
+        require_live_input()
+        from pynput.mouse import Button, Controller
+
+        steps = max(2, min(50, duration_ms // 16 or 1))
+        try:
+            mouse = Controller()
+            mouse.position = (x1, y1)
+            self._verify_cursor(mouse, x1, y1)
+            mouse.press(Button.left)
+            for i in range(1, steps + 1):
+                t = i / steps
+                mouse.position = (x1 + (x2 - x1) * t, y1 + (y2 - y1) * t)
+                time.sleep(max(0.0, duration_ms / 1000 / steps))
+            mouse.release(Button.left)
+        except Exception as exc:
+            raise DeviceDispatchError(
+                f"Desktop drag from ({x1}, {y1}) failed ({exc}); on macOS grant "
+                "Accessibility permission to your terminal."
+            ) from exc
         logger.info(
             f"Desktop drag dispatched from ({x1}, {y1}) to ({x2}, {y2}) over {duration_ms}ms"
         )
 
     def text(self, value: str) -> None:
-        """Type text into the currently active desktop window."""
+        """Type text into the currently focused desktop control."""
+        require_live_input()
+        from pynput.keyboard import Controller
+
+        try:
+            Controller().type(value)
+        except Exception as exc:
+            raise DeviceDispatchError(
+                f"Desktop typing failed ({exc}); on macOS grant "
+                "Accessibility permission to your terminal."
+            ) from exc
         logger.info(f"Desktop text dispatched: {len(value)} characters")
 
     def capture_frame(self, state_label: str = "initial") -> CapturedFrame:

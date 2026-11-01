@@ -4,17 +4,33 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import io
+import json
 import time
+from dataclasses import dataclass
+from typing import Any
 
 import httpx
+from meta_sam_parser import (
+    SegmentationBoxRecord,
+    SegmentationMaskRecord,
+    decode_mask_to_raster,
+    image_segmentation_format,
+    parse_responses_stream,
+)
+from PIL import Image
 
 from musepilot.config import get_settings
-from musepilot.contracts.schemas import MaskMetadata, MaskSet
+from musepilot.contracts.schemas import LiveModelError, MaskMetadata, MaskSet
 from musepilot.perception.capture import CapturedFrame
 from musepilot.telemetry import GLOBAL_TELEMETRY, get_logger
 
 logger = get_logger("musepilot.perception.sam")
+
+_MAX_API_IMAGE_DIM = 1600
+_DEDUP_IOU_THRESHOLD = 0.5
 
 
 def compute_bbox_centroid(bbox: tuple[int, int, int, int]) -> tuple[int, int]:
@@ -27,6 +43,98 @@ def bbox_to_polygon(bbox: tuple[int, int, int, int]) -> list[tuple[int, int]]:
     """Convert a bounding box into its 4 corner polygon vertices."""
     x1, y1, x2, y2 = bbox
     return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
+
+
+@dataclass(frozen=True)
+class _Detection:
+    """One SAM match: concept label, frame-pixel box, confidence, and mask raster."""
+
+    concept: str
+    bbox: tuple[int, int, int, int]
+    confidence: float
+    raster: bytes | None
+    raster_width: int
+    raster_height: int
+
+
+def bounding_box_iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
+    """Compute intersection-over-union for two bounding boxes in [0.0, 1.0]."""
+    x1 = max(a[0], b[0])
+    y1 = max(a[1], b[1])
+    y2 = min(a[3], b[3])
+    x2 = min(a[2], b[2])
+    inter = max(0, x2 - x1) * max(0, y2 - y1)
+    if inter == 0:
+        return 0.0
+    union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
+    return inter / union if union > 0 else 0.0
+
+
+def dedupe_detections(
+    detections: list[_Detection], iou_threshold: float = _DEDUP_IOU_THRESHOLD
+) -> list[_Detection]:
+    """Merge overlapping cross-concept detections, keeping higher confidence."""
+    ordered = sorted(detections, key=lambda d: d.confidence, reverse=True)
+    kept: list[_Detection] = []
+    for candidate in ordered:
+        if any(bounding_box_iou(candidate.bbox, k.bbox) >= iou_threshold for k in kept):
+            continue
+        kept.append(candidate)
+    return sorted(kept, key=lambda d: (d.bbox[1], d.bbox[0]))
+
+
+def raster_centroid_in_box(detection: _Detection) -> tuple[int, int]:
+    """Compute the mask-raster centroid mapped into frame pixels (box fallback)."""
+    x1, y1, x2, y2 = detection.bbox
+    box_w, box_h = max(1, x2 - x1), max(1, y2 - y1)
+    if detection.raster and detection.raster_width > 0 and detection.raster_height > 0:
+        on = [i for i, v in enumerate(detection.raster) if v]
+        if on:
+            mean_col = sum(i % detection.raster_width for i in on) / len(on)
+            mean_row = sum(i // detection.raster_width for i in on) / len(on)
+            cx = x1 + int((mean_col + 0.5) * box_w / detection.raster_width)
+            cy = y1 + int((mean_row + 0.5) * box_h / detection.raster_height)
+            return (min(max(cx, x1), x2), min(max(cy, y1), y2))
+    return compute_bbox_centroid(detection.bbox)
+
+
+def accumulate_output_text(sse_lines: list[str]) -> str:
+    """Accumulate the output_text lane from Responses SSE data lines."""
+    chunks: list[str] = []
+    for line in sse_lines:
+        if not line.startswith("data: ") or "[DONE]" in line:
+            continue
+        try:
+            event = json.loads(line[len("data: ") :])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict) and event.get("type") == "response.output_text.delta":
+            delta = event.get("delta", "")
+            if isinstance(delta, str):
+                chunks.append(delta)
+    return "".join(chunks)
+
+
+async def _aiter_events(events: list[dict[str, Any]]) -> Any:
+    """Adapt collected SSE event dicts to the parser's async event source."""
+    for event in events:
+        yield event
+
+
+async def _parse_image_events(events: list[dict[str, Any]]) -> Any:
+    """Consume SSE events into an image segmentation result inside one loop."""
+    stream = parse_responses_stream(_aiter_events(events), image_segmentation_format())
+    try:
+        return await stream.final_result()
+    finally:
+        await stream.aclose()
+
+
+def frame_to_png_bytes(image: Image.Image) -> bytes:
+    """Encode a PIL image as PNG bytes for API upload."""
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 class SAM31PerceptionClient:
@@ -68,7 +176,7 @@ class SAM31PerceptionClient:
         ) as span:
             t0 = time.perf_counter()
             if self.settings.execution_mode == "live" and self.settings.meta_api_key:
-                masks = self._call_live_sam_api(frame, workflow_id)
+                masks = self._call_live_sam_api(frame, workflow_id, trace_id)
             else:
                 masks = self._segment_deterministic_canvas(frame, workflow_id)
 
@@ -89,49 +197,157 @@ class SAM31PerceptionClient:
             self._cache[frame.screen_hash] = mask_set
             return mask_set
 
-    def _call_live_sam_api(self, frame: CapturedFrame, workflow_id: str) -> list[MaskMetadata]:
-        """Call Meta Model API SAM 3.1 endpoint with automatic fallback on network timeout."""
-        encoded_png = base64.b64encode(frame.to_png_bytes()).decode("ascii")
+    def _call_live_sam_api(
+        self, frame: CapturedFrame, workflow_id: str, trace_id: str
+    ) -> list[MaskMetadata]:
+        """Segment a live frame via SAM 3.1 Responses calls, one per UI concept."""
+        concepts = self.settings.sam_prompt_concepts
+        if not concepts:
+            raise LiveModelError("No SAM prompt concepts configured (sam_prompt_concepts).")
+        api_image, scale = self._downscale_for_api(frame.image)
+        encoded_png = base64.b64encode(frame_to_png_bytes(api_image)).decode("ascii")
+
+        detections: list[_Detection] = []
+        for concept in concepts:
+            try:
+                detections.extend(self._segment_concept(encoded_png, concept, scale, trace_id))
+            except LiveModelError:
+                raise
+            except Exception as exc:
+                raise LiveModelError(f"SAM 3.1 concept {concept!r} failed: {exc}") from exc
+        if not detections:
+            raise LiveModelError(
+                f"SAM 3.1 matched zero UI controls for concepts {concepts} "
+                f"(workflow={workflow_id})."
+            )
+        merged = dedupe_detections(detections)
+        masks: list[MaskMetadata] = []
+        for mask_id, det in enumerate(merged, start=1):
+            raster_area = sum(1 for v in det.raster) if det.raster else 0
+            box_area = max(1, (det.bbox[2] - det.bbox[0]) * (det.bbox[3] - det.bbox[1]))
+            masks.append(
+                MaskMetadata(
+                    mask_id=mask_id,
+                    bbox=det.bbox,
+                    centroid_px=raster_centroid_in_box(det),
+                    area_px=raster_area or box_area,
+                    confidence=det.confidence,
+                    semantic_tag=f"{det.concept.replace(' ', '_')}_{mask_id}",
+                    polygon=bbox_to_polygon(det.bbox),
+                )
+            )
+        logger.info(
+            f"SAM 3.1 live segmentation: {len(masks)} masks from {len(detections)} matches",
+            extra={
+                "trace_id": trace_id,
+                "workflow_id": workflow_id,
+                "component": "perception.sam3_1",
+                "model_id": self.settings.sam_model_id,
+            },
+        )
+        return masks
+
+    @staticmethod
+    def _downscale_for_api(image: Image.Image) -> tuple[Image.Image, float]:
+        """Cap the API image at _MAX_API_IMAGE_DIM, returning the scale applied."""
+        width, height = image.size
+        longest = max(width, height)
+        if longest <= _MAX_API_IMAGE_DIM:
+            return image, 1.0
+        scale = _MAX_API_IMAGE_DIM / longest
+        resized = image.resize((max(1, int(width * scale)), max(1, int(height * scale))))
+        return resized, scale
+
+    def _segment_concept(
+        self, encoded_png: str, concept: str, scale: float, trace_id: str
+    ) -> list[_Detection]:
+        """Run one SAM Responses call for a concept and parse matches to detections."""
+        payload = {
+            "model": self.settings.sam_model_id,
+            "stream": True,
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": concept},
+                        {
+                            "type": "input_image",
+                            "image_url": f"data:image/png;base64,{encoded_png}",
+                        },
+                    ],
+                }
+            ],
+        }
         headers = {
             "Authorization": f"Bearer {self.settings.meta_api_key}",
             "Content-Type": "application/json",
-        }
-        payload = {
-            "model": self.settings.sam_model_id,
-            "image_base64": encoded_png,
-            "return_polygons": True,
+            "Accept": "text/event-stream",
         }
         try:
-            with httpx.Client(timeout=self.settings.api_timeout_seconds) as client:
-                response = client.post(
-                    f"{self.settings.meta_api_base_url.rstrip('/')}/sam/segment",
+            with httpx.Client(timeout=self.settings.api_timeout_seconds * 4) as client:
+                with client.stream(
+                    "POST",
+                    f"{self.settings.meta_api_base_url.rstrip('/')}/responses",
                     headers=headers,
                     json=payload,
-                )
-                response.raise_for_status()
-                data = response.json()
-                raw_masks = data.get("masks", [])
-                if raw_masks:
-                    parsed: list[MaskMetadata] = []
-                    for idx, item in enumerate(raw_masks, start=1):
-                        bbox = tuple(item["bbox"])
-                        parsed.append(
-                            MaskMetadata(
-                                mask_id=idx,
-                                bbox=bbox,  # type: ignore[arg-type]
-                                centroid_px=compute_bbox_centroid(bbox),  # type: ignore[arg-type]
-                                area_px=int(item.get("area", 1024)),
-                                confidence=float(item.get("confidence", 0.96)),
-                                semantic_tag=item.get("label", f"control_{idx}"),
-                                polygon=bbox_to_polygon(bbox),  # type: ignore[arg-type]
-                            )
-                        )
-                    return parsed
+                ) as response:
+                    response.raise_for_status()
+                    events: list[dict[str, Any]] = []
+                    for line in response.iter_lines():
+                        if line.startswith("data: ") and "[DONE]" not in line:
+                            try:
+                                event = json.loads(line[len("data: ") :])
+                            except json.JSONDecodeError:
+                                continue
+                            if isinstance(event, dict):
+                                events.append(event)
+        except httpx.HTTPStatusError as exc:
+            raise LiveModelError(
+                f"SAM 3.1 request rejected (HTTP {exc.response.status_code})."
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise LiveModelError(f"SAM 3.1 transport failed: {exc}") from exc
+
+        try:
+            result = asyncio.run(_parse_image_events(events))
         except Exception as exc:
-            logger.warning(
-                f"Live SAM 3.1 endpoint unavailable ({exc}); using deterministic local segmentation."
+            raise LiveModelError(f"SAM 3.1 returned unparseable output: {exc}") from exc
+        boxes = {r.object_id: r for r in result.records if isinstance(r, SegmentationBoxRecord)}
+        masks = {r.object_id: r for r in result.records if isinstance(r, SegmentationMaskRecord)}
+        detections: list[_Detection] = []
+        for object_id, box in boxes.items():
+            inv = 1.0 / scale if scale > 0 else 1.0
+            # Parser bounds are exclusive; restore inclusive wire corners.
+            bbox = (
+                int(box.left * inv),
+                int(box.top * inv),
+                int(box.right * inv) - 1,
+                int(box.bottom * inv) - 1,
             )
-        return self._segment_deterministic_canvas(frame, workflow_id)
+            raster: bytes | None = None
+            raster_w, raster_h = 0, 0
+            mask_record = masks.get(object_id)
+            if mask_record is not None:
+                try:
+                    raster = bytes(decode_mask_to_raster(mask_record.mask))
+                    raster_w, raster_h = mask_record.mask.width, mask_record.mask.height
+                except Exception as exc:
+                    logger.warning(
+                        f"SAM mask decode failed for object {object_id} ({exc}); using box.",
+                        extra={"trace_id": trace_id, "component": "perception.sam3_1"},
+                    )
+            detections.append(
+                _Detection(
+                    concept=concept,
+                    bbox=bbox,
+                    confidence=float(box.confidence or 0.9),
+                    raster=raster,
+                    raster_width=raster_w,
+                    raster_height=raster_h,
+                )
+            )
+        return detections
 
     def _segment_deterministic_canvas(
         self, frame: CapturedFrame, workflow_id: str

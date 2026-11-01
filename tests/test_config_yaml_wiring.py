@@ -37,7 +37,7 @@ def test_yaml_file_provides_defaults_and_env_overrides(
     assert settings.planner_temperature == 0.0
     assert settings.verifier_min_roi_pixel_delta == 0.5
     assert settings.display_dpi_scale == 3.0
-    assert settings.sam_model_id == "meta-models/sam-3.1"
+    assert settings.sam_model_id == "sam-3.1"
 
 
 def test_missing_yaml_falls_back_to_builtin_defaults(

@@ -181,6 +181,7 @@ def test_adb_driver_tap_command_shape(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr("subprocess.run", fake_run)
     monkeypatch.setattr("shutil.which", lambda _name: "/usr/bin/adb")
+    monkeypatch.setenv("MUSEPILOT_ALLOW_LIVE_INPUT", "true")
     AdbDeviceDriver(serial="emulator-5554").tap(320.0, 200.0)
 
     assert seen["cmd"] == [

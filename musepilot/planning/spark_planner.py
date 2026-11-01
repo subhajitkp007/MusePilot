@@ -13,7 +13,8 @@ import httpx
 from PIL import Image
 
 from musepilot.config import get_settings
-from musepilot.contracts.schemas import ActionOp, MaskSet, StepDAG, StepNode
+from musepilot.contracts.repair import extract_json_object
+from musepilot.contracts.schemas import ActionOp, LiveModelError, MaskSet, StepDAG, StepNode
 from musepilot.telemetry import GLOBAL_TELEMETRY, get_logger
 
 logger = get_logger("musepilot.planning.spark")
@@ -49,7 +50,7 @@ class MuseSparkPlanner:
             t0 = time.perf_counter()
             if self.settings.execution_mode == "live" and self.settings.meta_api_key:
                 dag = self._call_live_planner_api(
-                    workflow_id, intent, mask_set, som_image, replan_reason
+                    workflow_id, intent, mask_set, som_image, replan_reason, trace_id
                 )
             else:
                 dag = self._build_deterministic_dag(workflow_id, intent, mask_set, replan_reason)
@@ -68,6 +69,7 @@ class MuseSparkPlanner:
         mask_set: MaskSet,
         som_image: Image.Image,
         replan_reason: str | None,
+        trace_id: str = "local",
     ) -> StepDAG:
         """Call Meta Model API Muse Spark multimodal endpoint with SoM image."""
         buf = io.BytesIO()
@@ -93,6 +95,8 @@ class MuseSparkPlanner:
         payload = {
             "model": self.settings.planner_model_id,
             "temperature": self.settings.planner_temperature,
+            "max_tokens": self.settings.planner_max_tokens,
+            "response_format": {"type": "json_object"},
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {
@@ -107,22 +111,67 @@ class MuseSparkPlanner:
                 },
             ],
         }
+        content = self._post_chat(payload, headers, trace_id=trace_id)
         try:
-            with httpx.Client(timeout=self.settings.api_timeout_seconds) as client:
+            return StepDAG.model_validate(
+                self._with_echo_fields(extract_json_object(content), workflow_id, intent)
+            )
+        except (LiveModelError, ValueError) as exc:
+            logger.warning(
+                f"Planner reply failed validation ({exc}); retrying once with repair hint."
+            )
+        payload["messages"].append({"role": "assistant", "content": content})
+        payload["messages"].append(
+            {
+                "role": "user",
+                "content": (
+                    "Your previous reply was not a valid StepDAG JSON object. "
+                    "Reply with ONLY the JSON object, no prose, no fences."
+                ),
+            }
+        )
+        content = self._post_chat(payload, headers, trace_id=trace_id)
+        try:
+            return StepDAG.model_validate(
+                self._with_echo_fields(extract_json_object(content), workflow_id, intent)
+            )
+        except (LiveModelError, ValueError) as exc:
+            raise LiveModelError(f"Planner failed to emit a valid StepDAG: {exc}") from exc
+
+    @staticmethod
+    def _with_echo_fields(parsed: dict, workflow_id: str, intent: str) -> dict:
+        """Fill workflow_id/intent echoes when the model omits them."""
+        parsed.setdefault("workflow_id", workflow_id)
+        parsed.setdefault("intent", intent)
+        parsed.setdefault("plan_version", "planner_som_v1")
+        return parsed
+
+    def _post_chat(self, payload: dict, headers: dict[str, str], trace_id: str = "local") -> str:
+        """POST one chat completion and return the assistant content."""
+        try:
+            with httpx.Client(timeout=self.settings.api_timeout_seconds * 4) as client:
                 response = client.post(
                     f"{self.settings.meta_api_base_url.rstrip('/')}/chat/completions",
                     headers=headers,
                     json=payload,
                 )
                 response.raise_for_status()
-                content = response.json()["choices"][0]["message"]["content"]
-                parsed = json.loads(content)
-                return StepDAG.model_validate(parsed)
-        except Exception as exc:
-            logger.warning(
-                f"Live Muse Spark API fallback triggered ({exc}); using verified deterministic DAG."
-            )
-            return self._build_deterministic_dag(workflow_id, intent, mask_set, replan_reason)
+                choice = response.json()["choices"][0]
+                content = choice["message"]["content"]
+                finish_reason = choice.get("finish_reason", "unknown")
+        except httpx.HTTPStatusError as exc:
+            raise LiveModelError(
+                f"Planner request rejected (HTTP {exc.response.status_code})."
+            ) from exc
+        except (httpx.HTTPError, KeyError, IndexError, TypeError) as exc:
+            raise LiveModelError(f"Planner request failed: {exc}") from exc
+        if not content:
+            raise LiveModelError(f"Planner returned empty content (finish_reason={finish_reason}).")
+        logger.info(
+            "Muse Spark planner reply received",
+            extra={"trace_id": trace_id, "component": "planning.muse_spark"},
+        )
+        return str(content)
 
     def _build_deterministic_dag(
         self,
