@@ -50,17 +50,21 @@ class LiveRecordBuffer:
         self.events.clear()
 
     def publish_plan(self, plan_summary: str, steps: list[dict[str, Any]]) -> None:
-        self.events.append({
-            "type": "plan",
-            "plan_summary": plan_summary,
-            "steps": steps,
-        })
+        self.events.append(
+            {
+                "type": "plan",
+                "plan_summary": plan_summary,
+                "steps": steps,
+            }
+        )
 
     def publish_step_started(self, step_id: int) -> None:
-        self.events.append({
-            "type": "step_started",
-            "step_id": step_id,
-        })
+        self.events.append(
+            {
+                "type": "step_started",
+                "step_id": step_id,
+            }
+        )
 
     def publish(self, record: StepExecutionRecord) -> None:
         self.records.append(record.model_dump(mode="json"))

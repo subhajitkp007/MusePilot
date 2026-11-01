@@ -23,4 +23,3 @@ def test_voice_feedback_methods_execute_safely(monkeypatch) -> None:
     synth.speak_step_verified(1, "Frequency slider set to 75%")
     synth.speak_self_healing("Dismissing modal")
     synth.speak_workflow_completed("w1")
-

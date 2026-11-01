@@ -707,7 +707,10 @@ async def stream_run_spans(websocket: WebSocket) -> None:
                     await websocket.send_json({"type": "step_record", "record": rec})
                 await asyncio.sleep(0.05)
             await _drain_spans(websocket, sent_span_ids)
-            if GLOBAL_FRAME_BUFFER.seq > last_frame_seq and GLOBAL_FRAME_BUFFER.latest_event is not None:
+            if (
+                GLOBAL_FRAME_BUFFER.seq > last_frame_seq
+                and GLOBAL_FRAME_BUFFER.latest_event is not None
+            ):
                 await websocket.send_json(GLOBAL_FRAME_BUFFER.latest_event)
             while sent_event_count < len(GLOBAL_RECORD_BUFFER.events):
                 evt = GLOBAL_RECORD_BUFFER.events[sent_event_count]
