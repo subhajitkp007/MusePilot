@@ -30,7 +30,7 @@
 1. [The Crisis: Why GUI Automation Breaks in 2026](#-the-crisis-why-gui-automation-breaks-in-2026)
 2. [System Architecture Diagram (Meta Industry Standard)](#-system-architecture-diagram-meta-industry-standard)
 3. [The Core Breakthrough: Zero-Coordinate Invariant](#-the-core-breakthrough-zero-coordinate-invariant)
-4. [Real-World Enterprise & Mobile Storylines](#-real-world-enterprise--mobile-storylines)
+4. [Enterprise & Mobile Use Cases (Production Scenarios)](#-enterprise--mobile-use-cases-production-scenarios)
 5. [Interactive Mission Control & Step DAG Visualizer](#-interactive-mission-control--step-dag-visualizer)
 6. [The Meta Model Stack & Ecosystem Matrix](#-the-meta-model-stack--ecosystem-matrix)
 7. [Pluggable Execution Drivers (Mobile ADB, Desktop, Simulator)](#-pluggable-execution-drivers-mobile-adb-desktop-simulator)
@@ -172,19 +172,19 @@ $$\text{Action Receipt} = \operatorname{Actuate}\left(\frac{\mathbf{c}_{\text{SA
 
 ---
 
-## 🎬 Real-World Enterprise & Mobile Storylines
+## 🎯 Enterprise & Mobile Use Cases (Production Scenarios)
 
-MusePilot is pre-packaged with verified real-world scenarios representing critical enterprise and device operations:
+MusePilot is pre-packaged with verified real-world scenarios representing critical enterprise, mobile, and mission-critical workflows:
 
-### Storyline 1: Autonomous Mobile Agent (Live Android Device via ADB)
+### Use Case 1: Autonomous Mobile Agent (Live Android Device via ADB)
 * **Problem:** Automating real mobile applications (e.g., managing device alarms, triaging notifications, configuring enterprise MDM settings) across physical screens with unpredictable popups.
 * **Solution:** MusePilot connects over ADB (`adb shell screencap` + `adb shell input tap/keyevent`), captures real-time frames, grounds UI elements with SAM 3.1, executes taps on physical pixel coordinates (e.g. Samsung Galaxy S24 Ultra $720 \times 1560$), and verifies UI transitions with Muse Spark Open.
 
-### Storyline 2: Legacy Industrial SCADA / Canvas Systems
+### Use Case 2: Legacy Industrial SCADA / Canvas Systems
 * **Problem:** A critical power-grid sub-station console or water treatment dashboard runs inside an embedded HTML5 `<canvas>` or legacy X11 app with 0 DOM nodes. Traditional RPA bots fail completely.
 * **Solution:** SAM 3.1 segments pump toggles, pressure sliders, and emergency cutoff switches without needing DOM metadata. Muse Spark plans operations strictly over visual boundaries.
 
-### Storyline 3: High-Frequency Financial Trade Confirmation with Modal Interception
+### Use Case 3: High-Frequency Financial Trade Confirmation with Modal Interception
 * **Problem:** During automated compliance ticket execution, an unexpected transient risk disclaimer modal appears, causing conventional automated scripts to crash or mis-click.
 * **Solution:** Muse Spark Open catches the zero-pixel delta on the target trade button, identifies the modal obstruction, triggers autonomous self-healing, dismisses the modal, and safely verifies the order execution.
 
