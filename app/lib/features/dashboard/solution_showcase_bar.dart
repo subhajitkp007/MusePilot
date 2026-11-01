@@ -115,11 +115,6 @@ class SolutionShowcaseBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final active = kSolutionScenarios.firstWhere(
-      (s) => s.id == selectedScenarioId,
-      orElse: () => kSolutionScenarios.first,
-    );
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -162,7 +157,7 @@ class SolutionShowcaseBar extends StatelessWidget {
             separatorBuilder: (context, index) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               final scenario = kSolutionScenarios[index];
-              final isSelected = scenario.id == active.id;
+              final isSelected = scenario.id == selectedScenarioId;
 
               return InkWell(
                 onTap: running ? null : () => onSelectScenario(scenario),
@@ -252,49 +247,6 @@ class SolutionShowcaseBar extends StatelessWidget {
                 ),
               );
             },
-          ),
-        ),
-        // Active Scenario ROI banner
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: active.badgeColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: active.badgeColor.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.lightbulb_outline,
-                  size: 14,
-                  color: active.badgeColor,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Why it matters: ',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: active.badgeColor,
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    active.businessRoi,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: MetaTheme.inkPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ],
