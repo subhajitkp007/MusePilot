@@ -148,108 +148,137 @@ class SolutionShowcaseBar extends StatelessWidget {
             ],
           ),
         ),
-        SizedBox(
-          height: 82,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            itemCount: kSolutionScenarios.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
-              final scenario = kSolutionScenarios[index];
-              final isSelected = scenario.id == selectedScenarioId;
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // When screen is wide enough (>= 980px), spread cards across full width with zero gap
+            final isWide = constraints.maxWidth >= 980;
 
-              return InkWell(
-                onTap: running ? null : () => onSelectScenario(scenario),
-                borderRadius: BorderRadius.circular(10),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 250,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? MetaTheme.surfaceCardElevated
-                        : MetaTheme.surfaceCard,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isSelected
-                          ? scenario.badgeColor
-                          : MetaTheme.surfaceCardBorder,
-                      width: isSelected ? 1.5 : 1.0,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            if (isWide) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SizedBox(
+                  height: 82,
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Icon(
-                            scenario.icon,
-                            size: 18,
-                            color: isSelected
-                                ? scenario.badgeColor
-                                : MetaTheme.inkSecondary,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              scenario.name,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                                color: isSelected
-                                    ? MetaTheme.inkPrimary
-                                    : MetaTheme.inkSecondary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: scenario.badgeColor.withValues(
-                                alpha: 0.15,
-                              ),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              scenario.highlightBadge,
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                                color: scenario.badgeColor,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            scenario.industry,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: MetaTheme.inkMuted,
-                            ),
-                          ),
-                        ],
-                      ),
+                      for (int i = 0; i < kSolutionScenarios.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildCard(kSolutionScenarios[i]),
+                        ),
+                      ],
                     ],
                   ),
                 ),
               );
-            },
-          ),
+            }
+
+            // On narrower screens, allow horizontal scrolling
+            return SizedBox(
+              height: 82,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                scrollDirection: Axis.horizontal,
+                itemCount: kSolutionScenarios.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 10),
+                itemBuilder: (context, index) =>
+                    _buildCard(kSolutionScenarios[index], width: 220),
+              ),
+            );
+          },
         ),
       ],
+    );
+  }
+
+  Widget _buildCard(SolutionScenario scenario, {double? width}) {
+    final isSelected = scenario.id == selectedScenarioId;
+
+    return InkWell(
+      onTap: running ? null : () => onSelectScenario(scenario),
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: width,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? MetaTheme.surfaceCardElevated
+              : MetaTheme.surfaceCard,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected
+                ? scenario.badgeColor
+                : MetaTheme.surfaceCardBorder,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  scenario.icon,
+                  size: 18,
+                  color: isSelected
+                      ? scenario.badgeColor
+                      : MetaTheme.inkSecondary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    scenario.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w600,
+                      color: isSelected
+                          ? MetaTheme.inkPrimary
+                          : MetaTheme.inkSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scenario.badgeColor.withValues(
+                      alpha: 0.15,
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    scenario.highlightBadge,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: scenario.badgeColor,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  scenario.industry,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: MetaTheme.inkMuted,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
