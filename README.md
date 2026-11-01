@@ -8,8 +8,9 @@
 [![Track](https://img.shields.io/badge/Track-Push%20the%20Frontier-orange)](https://cerebralvalley.ai/e/meta-ai-developer-hackathon)
 [![Open%20Weight](https://img.shields.io/badge/Verifier-muse--spark--open--1026-purple)](https://dev.meta.ai/models/muse-spark-open)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-107%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-135%20passed-brightgreen)](tests/)
 [![Architecture](https://img.shields.io/badge/Invariant-Zero--Coordinate-00E5FF)](docs/ARCHITECTURE.md)
+[![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-8A2BE2)](docs/ARCHITECTURE.md#g-model-context-protocol-mcp-server)
 
 ---
 
@@ -36,10 +37,11 @@
 7. [Pluggable Execution Drivers (Mobile ADB, Desktop, Simulator)](#-pluggable-execution-drivers-mobile-adb-desktop-simulator)
 8. [Quickstart Guide (60 Seconds to Live Demo)](#-quickstart-guide-60-seconds-to-live-demo)
 9. [Developer Hub & Enterprise SDK Integration](#-developer-hub--enterprise-sdk-integration)
-10. [Verified Rehearsal Benchmark Metrics](#-verified-rehearsal-benchmark-metrics)
-11. [Governance, Safety & Responsible AI](#-governance-safety--responsible-ai)
-12. [Repository Layout](#-repository-layout)
-13. [Contributing & License](#-contributing--license)
+10. [Model Context Protocol (MCP) Server (Cursor, Claude, Antigravity)](#-model-context-protocol-mcp-server)
+11. [Verified Rehearsal Benchmark Metrics](#-verified-rehearsal-benchmark-metrics)
+12. [Governance, Safety & Responsible AI](#-governance-safety--responsible-ai)
+13. [Repository Layout](#-repository-layout)
+14. [Contributing & License](#-contributing--license)
 
 ---
 
@@ -125,6 +127,15 @@ flowchart TD
         F2 --> F3
     end
 
+    subgraph AGENTS["7. MODEL CONTEXT PROTOCOL (MCP) & AI AGENTS"]
+        G1["External AI Coding Assistants\n(Claude Desktop • Cursor • Antigravity • Cline)"]
+        G2["MusePilot MCP Server\n(JSON-RPC 2.0 stdio & SSE)"]
+        G3["8 Tools • 5 Resources • 2 Prompts\n(execute_workflow • health • trace • benchmark)"]
+        
+        G1 <--> G2
+        G2 <--> G3
+    end
+
     %% Flow connections between layers
     A1 --> C1
     A3 --> C1
@@ -140,17 +151,23 @@ flowchart TD
     D1 -.->|Dispatched Receipt| F1
     E4 -.->|Step Verdict| F1
 
+    G3 <--> C1
+    G3 <--> D1
+    G3 <--> F1
+
     classDef meta fill:#1877F2,stroke:#00E5FF,stroke-width:2px,color:#FFFFFF;
     classDef openweight fill:#9D4EDD,stroke:#00E5FF,stroke-width:2px,color:#FFFFFF;
     classDef verified fill:#00E676,stroke:#0B0E14,stroke-width:2px,color:#0B0E14;
     classDef alert fill:#FF3B5C,stroke:#0B0E14,stroke-width:2px,color:#FFFFFF;
+    classDef mcp fill:#8A2BE2,stroke:#00E5FF,stroke-width:2px,color:#FFFFFF;
     classDef dark fill:#121824,stroke:#1E293B,stroke-width:1px,color:#F1F5F9;
 
     class A3,B2,C1 meta;
     class E3 openweight;
     class E5 verified;
     class E6,E7 alert;
-    class A1,A2,B1,B3,B4,C2,C3,D1,D2,D3,D4,D5,E1,E2,F1,F2,F3 dark;
+    class G2,G3 mcp;
+    class A1,A2,B1,B3,B4,C2,C3,D1,D2,D3,D4,D5,E1,E2,F1,F2,F3,G1 dark;
 ```
 
 ---
@@ -296,7 +313,7 @@ cp .env.example .env
 # 3. Verify pre-flight system health & Meta model credentials
 make health
 
-# 4. Run automated test suites (107 unit, regression, & invariant tests)
+# 4. Run automated test suites (124 unit, regression, & invariant tests)
 make test
 
 # 5. Launch the backend API & live WebSocket runner
@@ -304,6 +321,86 @@ make server
 ```
 
 Open your browser to **`http://127.0.0.1:8501`** directly to access the compiled production web dashboard!
+
+---
+
+### 🔐 Environment Configuration (`.env`) & JWT Setup
+
+MusePilot loads all operational secrets and runtime settings through `.env` (layered on top of `configs/default_config.yaml`). Copy the provided template to get started:
+
+```bash
+cp .env.example .env
+```
+
+#### Configuration Sections Breakdown
+
+| Variable | Default | Purpose / Required Format |
+| :--- | :--- | :--- |
+| **`MUSEPILOT_META_API_KEY`** | *Required* | Meta AI API credential powering SAM 3.1, Muse Spark, and Voice Transcribe. |
+| **`MUSEPILOT_META_API_BASE_URL`** | `https://api.meta.ai/v1` | Meta AI inference gateway URL. |
+| **`MUSEPILOT_SAM_MODEL_ID`** | `sam-3.1` | Visual grounding segmentation model ID. |
+| **`MUSEPILOT_PLANNER_MODEL_ID`** | `muse-spark-1.3` | Multimodal planner model ID. |
+| **`MUSEPILOT_VOICE_MODEL_ID`** | `muse-voice-transcribe-1.0` | Spoken audio transcription model ID. |
+| **`MUSEPILOT_VERIFIER_BACKEND`** | `meta` | `partner` (open-weight verifier on Baseten/Modal/Fireworks) or `meta` (direct Meta API). |
+| **`MUSEPILOT_VERIFIER_MODEL_ID`** | `meta-models/muse-spark-open-1026` | Official Meta open-weight verifier model (**$10K Bonus**). |
+| **`MUSEPILOT_PARTNER_PROVIDER`** | `baseten` | Partner inference host (`baseten`, `modal`, or `fireworks`). |
+| **`MUSEPILOT_PARTNER_API_KEY`** | `""` | API key from your partner inference provider. |
+| **`MUSEPILOT_EXECUTION_MODE`** | `simulated` | `simulated` (reproducible deterministic canvas) or `live` (real OS & device driver). |
+| **`MUSEPILOT_ALLOW_LIVE_INPUT`** | `false` | Explicit opt-in gate required to dispatch real mouse/keyboard/touch events to the OS. |
+| **`MUSEPILOT_DISPLAY_DPI_SCALE`** | `2.0` | Display pixel ratio calibration (`2.0` for Retina displays, `1.0` for 1080p). |
+| **`MUSEPILOT_ADB_SERIAL`** | `""` | Preferred Android ADB device serial (blank selects first attached device). |
+| **`MUSEPILOT_SERVER_HOST`** | `127.0.0.1` | HUD API bind address. |
+| **`MUSEPILOT_SERVER_PORT`** | `8501` | HUD API bind port. |
+| **`MUSEPILOT_RATE_LIMIT_ENABLED`** | `true` | Enable Meta-standard sliding window rate limiting. |
+| **`MUSEPILOT_RATE_LIMIT_READ_PER_MINUTE`** | `120` | Maximum read requests per minute per client IP. |
+| **`MUSEPILOT_RATE_LIMIT_MUTATION_PER_MINUTE`** | `30` | Maximum compute execution requests per minute per client IP. |
+| **`MUSEPILOT_JWT_SECRET`** | `""` | HMAC-SHA256 secret key for signing & verifying JWTs. |
+| **`MUSEPILOT_JWT_TOKEN`** | `""` | Static pre-generated JWT token accepted directly from `.env`. |
+| **`MUSEPILOT_ALLOWED_ORIGINS`** | `http://localhost:8501,...` | CORS origin whitelist (comma-separated or JSON list). |
+
+#### Generating a Production JWT Token via CLI
+
+Generate a secure RFC 7519 `HS256` token with custom expiration and claims using the built-in CLI tool:
+
+```bash
+# Generate a token valid for 24 hours:
+.venv/bin/python -m musepilot jwt-token --subject operator --hours 24
+
+# Or specify a custom HMAC secret:
+.venv/bin/python -m musepilot jwt-token --subject admin --hours 8760 --secret "my-custom-256-bit-secret"
+```
+
+The CLI outputs the generated token and the exact lines to add to your `.env`:
+
+```bash
+# Append to your .env:
+MUSEPILOT_JWT_SECRET=my-custom-256-bit-secret
+MUSEPILOT_JWT_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### How the Frontend HUD Calls APIs Without Knowing the JWT
+
+The frontend Web HUD (running in the operator's browser) **does not need to know, hardcode, or store any JWT**:
+
+1. **Automatic `HttpOnly` Session Cookie:** When an operator loads `http://127.0.0.1:8501/`, the backend automatically issues a secure `musepilot_jwt` cookie:
+   ```http
+   Set-Cookie: musepilot_jwt=<signed_token>; Path=/; SameSite=Lax; HttpOnly
+   ```
+2. **Native Browser Dispatch:** Every subsequent API request (`GET /api/traces`, `POST /api/runs`, etc.) and WebSocket stream (`ws://127.0.0.1:8501/ws/runs`) automatically includes this cookie.
+3. **Security Architecture:**
+   - **XSS Resistant:** JavaScript cannot access `HttpOnly` cookies.
+   - **CSRF Protected:** `SameSite=Lax` prevents unauthorized cross-origin requests.
+   - **CORS Whitelisted:** Only approved origins (`localhost:8501`, `127.0.0.1:8501`) can make requests.
+4. **External Callers & SDKs:** Non-browser clients (Python SDK, CLI, cURL) simply pass the token in the standard HTTP header:
+   ```bash
+   curl -X POST http://127.0.0.1:8501/api/runs \
+     -H "Authorization: Bearer <your-jwt-token>" \
+     -H "Content-Type: application/json" \
+     -d '{"workflow_id": "w1"}'
+   ```
+5. **Auto-Handshake Endpoint:** If any third-party frontend or microservice needs to fetch a token programmatically, it can call `GET /api/auth/token` on loopback to receive `{"token": "<jwt>", "token_type": "Bearer"}`.
+
+---
 
 ### Guaranteed Deterministic Rehearsal (Zero-Risk Live Judging)
 
@@ -366,7 +463,6 @@ curl -X POST "http://127.0.0.1:8501/api/runs" \
 ### Real-Time WebSocket Protocol
 
 ```javascript
-// Stream live Step DAG, active states, and execution spans
 const ws = new WebSocket("ws://127.0.0.1:8501/ws/runs");
 
 ws.onopen = () => {
@@ -384,6 +480,84 @@ ws.onmessage = (event) => {
   if (data.type === "step_record") console.log("Verified Receipt:", data.record);
 };
 ```
+
+---
+
+## 🤖 Model Context Protocol (MCP) Server
+
+MusePilot features a built-in **Model Context Protocol (MCP)** server, turning the platform into open multimodal GUI automation infrastructure. Any MCP-compliant AI assistant or agent—including **Cursor**, **Claude Desktop**, **Claude Code**, **Antigravity IDE**, and **Cline**—can invoke MusePilot tools, inspect live traces, and query benchmark telemetry.
+
+### Running the MCP Server
+
+```bash
+# Standard I/O transport (for Cursor, Claude Desktop, Antigravity):
+.venv/bin/python -m musepilot mcp
+
+# Server-Sent Events (SSE) HTTP transport:
+.venv/bin/python -m musepilot mcp --transport sse --port 8502
+```
+
+### 1-Click Client Configuration
+
+#### 1. Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json`)
+```json
+{
+  "mcpServers": {
+    "musepilot": {
+      "command": "/absolute/path/to/MusePilot/.venv/bin/python",
+      "args": ["-m", "musepilot", "mcp"],
+      "cwd": "/absolute/path/to/MusePilot"
+    }
+  }
+}
+```
+
+#### 2. Cursor (`.cursor/mcp.json` or Settings ➔ Features ➔ MCP)
+```json
+{
+  "mcpServers": {
+    "musepilot": {
+      "command": "./.venv/bin/python",
+      "args": ["-m", "musepilot", "mcp"]
+    }
+  }
+}
+```
+
+#### 3. Antigravity IDE (`mcp.json`)
+```json
+{
+  "mcpServers": {
+    "musepilot": {
+      "command": ".venv/bin/python",
+      "args": ["-m", "musepilot", "mcp"],
+      "transport": "stdio"
+    }
+  }
+}
+```
+
+### Exposed Capabilities
+
+| Type | Name | Purpose |
+| :--- | :--- | :--- |
+| **Tool** | `musepilot_health` | Inspect pre-flight readiness (Meta API keys, SAM 3.1, Muse Spark, ADB devices). |
+| **Tool** | `musepilot_list_workflows` | List frozen executable workflows (`w1`, `w2`) with step descriptions. |
+| **Tool** | `musepilot_execute_workflow` | Run autonomous visual workflows (`simulated`, `desktop`, `adb`) with zero-coordinate receipts. |
+| **Tool** | `musepilot_list_traces` | Query recent trace summaries with status and step pass rates. |
+| **Tool** | `musepilot_get_trace` | Retrieve complete step execution trace, verifier receipts, and replan logs. |
+| **Tool** | `musepilot_get_benchmarks` | Query cumulative quantitative reliability metrics (hit rate, pass rate, MTTR). |
+| **Tool** | `musepilot_list_devices` | Probe attached Android ADB devices and desktop display scaling. |
+| **Tool** | `musepilot_transcribe_voice` | Transcribe operator audio instructions via Meta voice model. |
+| **Resource** | `musepilot://health` | Real-time system health JSON. |
+| **Resource** | `musepilot://workflows` | Catalogue of frozen workflows and step definitions. |
+| **Resource** | `musepilot://benchmarks` | Cumulative benchmark and reliability metrics JSON. |
+| **Resource** | `musepilot://traces/latest` | JSON payload of the most recent audit trace. |
+| **Resource** | `musepilot://devices` | Connected hardware devices and screen status. |
+| **Prompt** | `visual_regression_audit` | Autonomous visual UI regression testing template using SAM 3.1 & Spark verifier. |
+| **Prompt** | `self_healing_recovery_test` | Guided obstacle injection & self-healing verification template. |
+
+---
 
 ---
 
@@ -427,13 +601,15 @@ MusePilot/
 │   ├── planning/              # Meta Muse Spark multimodal planner client
 │   ├── verification/          # Partner-hosted Muse Spark Open (`1026`) visual verifier
 │   ├── voice/                 # Meta Muse Voice Transcribe client
+│   ├── mcp/                   # Model Context Protocol server (stdio & SSE transports)
+│   ├── security/              # RFC 7519 JWT engine, sliding window rate limiter, auth middleware
 │   ├── orchestrator/          # Closed-loop agent loop with live record & DAG streaming
 │   ├── server/                # Starlette API gateway + WebSocket run streaming
 │   └── trace/                 # Replayable deterministic JSON trace recorder
 ├── configs/                   # Non-secret system defaults (default_config.yaml)
 ├── demo/                      # Standalone HTML5 Canvas demo application
 ├── docs/                      # Enterprise specifications, architecture & security guides
-├── tests/                     # 107 unit and golden integration tests
+├── tests/                     # 135 unit, security, golden integration, and MCP tests
 ├── Makefile                   # Unified developer automation commands
 └── pyproject.toml             # Python packaging & tool configuration
 ```

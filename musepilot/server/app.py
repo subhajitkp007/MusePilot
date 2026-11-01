@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import io
 import json
 import re
@@ -26,6 +27,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from musepilot.config import get_settings
 from musepilot.contracts.schemas import (
+    WORKFLOWS,
     LiveModelError,
     RunRequest,
     RunTrace,
@@ -43,27 +45,182 @@ from musepilot.perception import (
     ScreenCaptureEngine,
     SetOfMarkRenderer,
 )
+from musepilot.security import (
+    GLOBAL_RATE_LIMITER,
+    JWTError,
+    RateLimitMiddleware,
+    decode_and_verify_jwt,
+)
 from musepilot.telemetry import GLOBAL_TELEMETRY, get_logger
 from musepilot.trace import TraceStore
 from musepilot.voice import MuseVoiceTranscribeClient
 
 logger = get_logger("musepilot.server")
 
-WORKFLOWS: tuple[WorkflowInfo, ...] = (
-    WorkflowInfo(
-        workflow_id="w1",
-        title="W1: Precision Canvas Calibration",
-        description="Calibrate frequency slider, damping toggle, gain input, and benchmark on a 0-DOM-node canvas.",
-    ),
-    WorkflowInfo(
-        workflow_id="w2",
-        title="W2: Voice Incident Dispatch + Self-Healing",
-        description="Transcribe a spoken incident command and dispatch it across apps with modal recovery.",
-    ),
-)
-
 _STATE_LABEL_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
+_TRACE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _WEB_DIR = Path(__file__).resolve().parent / "static" / "web"
+
+
+class SecurityHeadersMiddleware:
+    """Inject Meta-standard enterprise security headers into all HTTP responses."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_security_headers(message: Any) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                header_names = {h[0].lower() for h in headers}
+                if b"x-content-type-options" not in header_names:
+                    headers.append((b"x-content-type-options", b"nosniff"))
+                if b"x-frame-options" not in header_names:
+                    headers.append((b"x-frame-options", b"SAMEORIGIN"))
+                if b"referrer-policy" not in header_names:
+                    headers.append((b"referrer-policy", b"strict-origin-when-cross-origin"))
+                if b"permissions-policy" not in header_names:
+                    headers.append(
+                        (
+                            b"permissions-policy",
+                            b"accelerometer=(), camera=(), geolocation=(), gyroscope=(), payment=()",
+                        )
+                    )
+                if b"x-xss-protection" not in header_names:
+                    headers.append((b"x-xss-protection", b"1; mode=block"))
+                if b"content-security-policy" not in header_names:
+                    csp = (
+                        b"default-src 'self'; "
+                        b"script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline' https://www.gstatic.com; "
+                        b"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                        b"img-src 'self' data: blob: https://www.gstatic.com; "
+                        b"connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://www.gstatic.com https://fonts.gstatic.com; "
+                        b"font-src 'self' data: https://fonts.gstatic.com;"
+                    )
+                    headers.append((b"content-security-policy", csp))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_with_security_headers)
+
+
+class JWTSessionCookieMiddleware:
+    """Issue HttpOnly session JWT cookie so browsers loading the HUD need zero manual token knowledge."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        from musepilot.security import generate_jwt
+
+        request = Request(scope)
+        settings = getattr(request.app.state, "settings", None) or get_settings()
+        jwt_sec = getattr(settings, "jwt_secret", "")
+        jwt_tok = getattr(settings, "jwt_token", "")
+
+        path = scope.get("path", "")
+        is_ui_entrypoint = path in ("/", "/index.html", "/api/auth/token")
+        has_cookie = "musepilot_jwt" in request.cookies
+
+        async def send_with_session_cookie(message: Any) -> None:
+            if message["type"] == "http.response.start":
+                if is_ui_entrypoint and not has_cookie and (jwt_sec or jwt_tok):
+                    token_to_set = jwt_tok
+                    if not token_to_set and jwt_sec:
+                        token_to_set = generate_jwt(
+                            payload={"sub": "hud-operator", "role": "operator", "iss": "musepilot"},
+                            secret=jwt_sec,
+                            expires_in_seconds=86400 * 30,
+                        )
+                    if token_to_set:
+                        headers = list(message.get("headers", []))
+                        cookie_hdr = f"musepilot_jwt={token_to_set}; Path=/; SameSite=Lax; HttpOnly"
+                        headers.append((b"set-cookie", cookie_hdr.encode("latin1")))
+                        message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_with_session_cookie)
+
+
+def _extract_token(
+    headers: Any,
+    query_params: Any,
+    cookies: dict[str, str] | None = None,
+) -> str | None:
+    """Extract bearer/api-key/query/cookie token."""
+    auth_header = headers.get("authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        return auth_header[7:].strip()
+    api_key = headers.get("x-api-key", "").strip()
+    if api_key:
+        return api_key
+    query_token = query_params.get("token", "").strip()
+    if query_token:
+        return query_token
+    if cookies and "musepilot_jwt" in cookies:
+        return cookies["musepilot_jwt"].strip()
+    return None
+
+
+def _is_token_authorized(token: str | None, settings: Any) -> bool:
+    """Validate token against configured JWT or API token settings."""
+    has_auth_configured = bool(
+        getattr(settings, "api_token", "")
+        or getattr(settings, "jwt_secret", "")
+        or getattr(settings, "jwt_token", "")
+    )
+    if not has_auth_configured:
+        return True  # Dev mode: open
+
+    if not token:
+        return False
+
+    # 1. Exact match against static JWT token from .env
+    jwt_tok = getattr(settings, "jwt_token", "")
+    if jwt_tok and hmac.compare_digest(token, jwt_tok.strip()):
+        return True
+
+    # 2. Exact match against API token from .env
+    api_tok = getattr(settings, "api_token", "")
+    if api_tok and hmac.compare_digest(token, api_tok.strip()):
+        return True
+
+    # 3. Cryptographic signature verification via JWT secret from .env
+    jwt_sec = getattr(settings, "jwt_secret", "")
+    if jwt_sec:
+        try:
+            decode_and_verify_jwt(
+                token,
+                secret=jwt_sec,
+                allowed_algorithms=(getattr(settings, "jwt_algorithm", "HS256"),),
+            )
+            return True
+        except JWTError as exc:
+            logger.debug(f"JWT verification rejected: {exc}")
+
+    return False
+
+
+def _verify_auth(request: Request) -> bool:
+    """Verify request authorization against JWT or API token configuration."""
+    settings = getattr(request.app.state, "settings", None) or get_settings()
+    token = _extract_token(request.headers, request.query_params, request.cookies)
+    return _is_token_authorized(token, settings)
+
+
+def _verify_ws_auth(websocket: WebSocket) -> bool:
+    """Verify WebSocket authorization against JWT or API token configuration."""
+    settings = getattr(websocket.app.state, "settings", None) or get_settings()
+    token = _extract_token(websocket.headers, websocket.query_params, websocket.cookies)
+    return _is_token_authorized(token, settings)
 
 
 def _error(message: str, status_code: int) -> JSONResponse:
@@ -428,7 +585,7 @@ async def get_health(_request: Request) -> JSONResponse:
 
 async def get_config(_request: Request) -> JSONResponse:
     """Return non-secret runtime configuration for HUD clients."""
-    settings = get_settings()
+    settings = getattr(_request.app.state, "settings", None) or get_settings()
     return JSONResponse(
         {
             "execution_mode": settings.execution_mode,
@@ -451,6 +608,8 @@ async def list_workflows(_request: Request) -> JSONResponse:
 
 async def create_run(request: Request) -> JSONResponse:
     """Execute a workflow synchronously and return its full trace."""
+    if not _verify_auth(request):
+        return _error("Unauthorized: valid API token required.", 401)
     try:
         payload = await request.json()
     except json.JSONDecodeError:
@@ -484,6 +643,21 @@ async def create_run(request: Request) -> JSONResponse:
 
 async def transcribe_audio(request: Request) -> JSONResponse:
     """Transcribe an uploaded WAV command via Muse Voice Transcribe."""
+    if not _verify_auth(request):
+        return _error("Unauthorized: valid API token required.", 401)
+
+    settings = getattr(request.app.state, "settings", None) or get_settings()
+    max_bytes = settings.max_upload_bytes
+
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > max_bytes:
+                max_mb = max_bytes // (1024 * 1024)
+                return _error(f"Payload exceeds maximum allowed size of {max_mb}MB.", 413)
+        except ValueError:
+            return _error("Invalid Content-Length header.", 400)
+
     try:
         form = await request.form()
     except Exception:
@@ -499,7 +673,19 @@ async def transcribe_audio(request: Request) -> JSONResponse:
     try:
         with tempfile.TemporaryDirectory(prefix="musepilot_voice_") as tmpdir:
             audio_path = Path(tmpdir) / "command.wav"
-            audio_path.write_bytes(await upload.read())
+            total_bytes = 0
+            with audio_path.open("wb") as f:
+                while chunk := await upload.read(1024 * 1024):
+                    total_bytes += len(chunk)
+                    if total_bytes > max_bytes:
+                        max_mb = max_bytes // (1024 * 1024)
+                        return _error(
+                            f"Audio file exceeds maximum allowed size of {max_mb}MB.",
+                            413,
+                        )
+                    f.write(chunk)
+            if total_bytes == 0:
+                return _error("Uploaded audio file is empty.", 400)
             transcript = await run_in_threadpool(
                 MuseVoiceTranscribeClient().transcribe_command,
                 workflow_id,
@@ -564,7 +750,10 @@ async def get_latest_trace(request: Request) -> JSONResponse:
 
 async def get_trace(request: Request) -> JSONResponse:
     """Return a single trace by ID."""
-    trace = TraceStore().find_trace(request.path_params["trace_id"])
+    raw_id = request.path_params.get("trace_id", "")
+    if not _TRACE_ID_RE.match(raw_id):
+        return _error("Invalid trace_id; must be alphanumeric with hyphens or underscores.", 400)
+    trace = TraceStore().find_trace(raw_id)
     if trace is None:
         return _error("Trace not found.", 404)
     return JSONResponse(trace.model_dump(mode="json"))
@@ -576,7 +765,10 @@ async def get_states(request: Request) -> JSONResponse:
     workflow_id = params.get("workflow", "w1").lower()
     if workflow_id not in ("w1", "w2"):
         return _error("Unknown workflow; expected 'w1' or 'w2'.", 400)
-    trace = _resolve_trace(params.get("trace_id"), workflow_id)
+    trace_id = params.get("trace_id")
+    if trace_id and not _TRACE_ID_RE.match(trace_id):
+        return _error("Invalid trace_id query parameter.", 400)
+    trace = _resolve_trace(trace_id, workflow_id)
     states = _state_timeline(trace, workflow_id)
     return JSONResponse({"states": states, "default_state": states[-1]})
 
@@ -590,7 +782,10 @@ def _validated_frame_params(request: Request) -> tuple[str, str, str | None] | J
         return _error("Unknown workflow; expected 'w1' or 'w2'.", 400)
     if not _STATE_LABEL_RE.match(state_label):
         return _error("Invalid state label.", 400)
-    return workflow_id, state_label, params.get("trace_id")
+    trace_id = params.get("trace_id")
+    if trace_id and not _TRACE_ID_RE.match(trace_id):
+        return _error("Invalid trace_id parameter.", 400)
+    return workflow_id, state_label, trace_id
 
 
 async def get_raw_frame(request: Request) -> Response | JSONResponse:
@@ -611,7 +806,7 @@ async def get_som_frame(request: Request) -> Response | JSONResponse:
         return validated
     workflow_id, state_label, trace_id = validated
     trace = _resolve_trace(trace_id, workflow_id)
-    settings = get_settings()
+    settings = getattr(request.app.state, "settings", None) or get_settings()
     capture = ScreenCaptureEngine(dpi_scale=settings.display_dpi_scale)
     frame = await run_in_threadpool(capture.render_canvas_state, workflow_id, state_label)
     sam_client = SAM31PerceptionClient()
@@ -660,9 +855,37 @@ async def get_benchmark(_request: Request) -> JSONResponse:
 
 async def stream_run_spans(websocket: WebSocket) -> None:
     """Stream live telemetry spans for a run, then send the final trace."""
+    settings = getattr(websocket.app.state, "settings", None) or get_settings()
+
+    # Rate limiting on WebSocket connections
+    if getattr(settings, "rate_limit_enabled", True):
+        client_ip = websocket.client.host if websocket.client else "127.0.0.1"
+        limit = getattr(settings, "rate_limit_mutation_per_minute", 30)
+        allowed, _, retry_after = GLOBAL_RATE_LIMITER.check(f"{client_ip}:mutation", limit=limit)
+        if not allowed:
+            await websocket.accept()
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "detail": f"Rate limit exceeded ({limit} requests/minute). Please slow down.",
+                    "retry_after": retry_after,
+                }
+            )
+            await websocket.close(code=4429)
+            return
+
+    if not _verify_ws_auth(websocket):
+        await websocket.accept()
+        await websocket.send_json(
+            {"type": "error", "detail": "Unauthorized: valid JWT or API token required."}
+        )
+        await websocket.close(code=4401)
+        return
     await websocket.accept()
     try:
         payload = await websocket.receive_json()
+    except WebSocketDisconnect:
+        return
     except (json.JSONDecodeError, RuntimeError):
         await websocket.send_json({"type": "error", "detail": "Request must be valid JSON."})
         await websocket.close()
@@ -746,9 +969,35 @@ async def _drain_spans(websocket: WebSocket, sent_span_ids: set[str]) -> None:
             await websocket.send_json({"type": "span", "span": span.to_otel_dict()})
 
 
-def create_app() -> Starlette:
+async def get_auth_token(request: Request) -> JSONResponse:
+    """Return an active session JWT for frontend auto-handshake."""
+    from musepilot.security import generate_jwt
+
+    settings = getattr(request.app.state, "settings", None) or get_settings()
+    jwt_sec = getattr(settings, "jwt_secret", "")
+    jwt_tok = getattr(settings, "jwt_token", "")
+
+    token = jwt_tok
+    if not token and jwt_sec:
+        token = generate_jwt(
+            payload={"sub": "hud-operator", "role": "operator", "iss": "musepilot"},
+            secret=jwt_sec,
+            expires_in_seconds=86400 * 30,
+        )
+
+    if not token:
+        return JSONResponse({"token": "", "auth_required": False})
+
+    response = JSONResponse({"token": token, "token_type": "Bearer", "auth_required": True})
+    response.set_cookie("musepilot_jwt", token, path="/", samesite="lax", httponly=True)
+    return response
+
+
+def create_app(settings: Any | None = None) -> Starlette:
     """Build the MusePilot HUD API application."""
+    active_settings = settings or get_settings()
     routes: list[Route | WebSocketRoute | Mount] = [
+        Route("/api/auth/token", get_auth_token),
         Route("/api/health", get_health),
         Route("/api/config", get_config),
         Route("/api/workflows", list_workflows),
@@ -772,10 +1021,19 @@ def create_app() -> Starlette:
     app = Starlette(routes=routes)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["GET", "POST"],
+        allow_origins=active_settings.allowed_origins,
+        allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
+        allow_credentials=True,
     )
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(JWTSessionCookieMiddleware)
+    app.add_middleware(
+        RateLimitMiddleware,
+        limiter=GLOBAL_RATE_LIMITER,
+        settings_getter=lambda: getattr(app.state, "settings", active_settings),
+    )
+    app.state.settings = active_settings
     app.state.run_lock = asyncio.Lock()
     return app
 

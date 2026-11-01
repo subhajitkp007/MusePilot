@@ -49,14 +49,16 @@ Current computer-use agents (like raw OS-world agents or standard VLMs) attempt 
                        | Native Input Event|       +---------------+
                        +---------+---------+
                                  |
-                                 v
-                       +-------------------+
-                       | HUD API + FLUTTER |
-                       | Neon Masks, Plan, |
-                       | Verification Check|
-                       | Android/iOS/Web / |
-                       | macOS/Desktop     |
-                       +-------------------+
+        +------------------------+------------------------+
+        |                                                 |
+        v                                                 v
++-------------------------------+             +---------------------------+
+| MODEL CONTEXT PROTOCOL (MCP)  |             | HUD API & ENTERPRISE WEB  |
+| JSON-RPC 2.0 stdio / SSE      |             | Starlette ASGI API        |
+| Tools, Resources, Prompts     |             | Sliding Window Limiter    |
+| External AI Agent Invocations |             | Flutter Multi-Platform UI |
+| (Cursor, Claude, Antigravity) |             | ADB / Desktop / Simulated |
++-------------------------------+             +---------------------------+
 ```
 
 ---
@@ -138,6 +140,29 @@ Current computer-use agents (like raw OS-world agents or standard VLMs) attempt 
   - **Fail (Attempt 2):** Invalidate mask cache, capture fresh frame, re-run SAM 3.1 SoM, and request Muse Spark to replan from current state (self-healing from unexpected modals or page changes).
   - **Fail (Attempt 3):** Graceful human-in-the-loop escalation. Highlights ambiguous area on HUD for operator override.
 
+### G. Model Context Protocol (MCP) Server
+* **Standard:** Model Context Protocol (MCP) Specification over JSON-RPC 2.0 `stdio` and `sse` transports.
+* **Compatibility:** Native 1-click support for Claude Desktop, Cursor, Antigravity IDE, Cline, Roo Code, and autonomous multi-agent frameworks.
+* **Capabilities Exposed:**
+  - **Tools:**
+    - `musepilot_health`: Pre-flight model credentials, SAM 3.1 & Muse Spark status, and ADB device presence.
+    - `musepilot_list_workflows`: Frozen workflow catalogue with step goals and descriptions.
+    - `musepilot_execute_workflow`: Autonomous execution across `simulated`, `desktop`, or `adb` with zero-coordinate receipts.
+    - `musepilot_list_traces`: Historical trace ledger query with execution pass-rate summaries.
+    - `musepilot_get_trace`: Full step DAG inspection, verifier verdicts, and replan logs.
+    - `musepilot_get_benchmarks`: Real-time quantitative reliability benchmarks (hit rate, pass rate, MTTR).
+    - `musepilot_list_devices`: Hardware probe for attached Android ADB serials and host displays.
+    - `musepilot_transcribe_voice`: Spoken command transcription via Meta voice model.
+  - **Resources:**
+    - `musepilot://health`: Real-time system health JSON.
+    - `musepilot://workflows`: Frozen workflow definitions.
+    - `musepilot://benchmarks`: Benchmark telemetry JSON.
+    - `musepilot://traces/latest`: JSON of the latest execution trace.
+    - `musepilot://devices`: Connected hardware device registry.
+  - **Prompts:**
+    - `visual_regression_audit`: Automated visual regression testing workflow template.
+    - `self_healing_recovery_test`: Obstacle modal injection and dynamic replanning verification.
+
 ---
 
 ## 3. Meta Model Utilization Matrix
@@ -178,10 +203,12 @@ MusePilot/
 │   ├── orchestrator/          # State machine, DAG runner, self-healing loop
 │   ├── perception/            # SAM 3.1 client, mask filtering, SoM visual badge compositing, cache
 │   ├── planning/              # Muse Spark multimodal client, prompt templates, DAG schemas
-│   ├── execution/             # Centroid math, DPI scaling, native OS input drivers, capture
+│   ├── execution/             # Centroid math, DPI scaling, native OS & ADB input drivers, capture
 │   ├── verification/          # Visual diff engine, Muse Spark Open partner client, assertions
 │   ├── voice/                 # Muse Voice Transcribe integration, live audio recorder
-│   ├── dashboard/             # Real-time visual HUD (neon overlays, DAG progress, verification ticks)
+│   ├── mcp/                   # Model Context Protocol server (stdio & SSE transports)
+│   ├── security/              # RFC 7519 JWT engine, sliding window rate limiter, auth middleware
+│   ├── server/                # Starlette ASGI API, live WebSocket runner, static web bundle
 │   ├── trace/                 # JSON trace recorder, golden dataset serializer, deterministic replayer
 │   └── health/                # Pre-flight environment, API, and display calibration check
 ├── prompts/                   # Versioned, reproducible prompt files for Spark & Spark Open
