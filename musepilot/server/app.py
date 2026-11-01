@@ -44,6 +44,12 @@ from musepilot.perception import (
     ScreenCaptureEngine,
     SetOfMarkRenderer,
 )
+from musepilot.security import (
+    GLOBAL_RATE_LIMITER,
+    JWTError,
+    RateLimitMiddleware,
+    decode_and_verify_jwt,
+)
 from musepilot.telemetry import GLOBAL_TELEMETRY, get_logger
 from musepilot.trace import TraceStore
 from musepilot.voice import MuseVoiceTranscribeClient
@@ -114,50 +120,71 @@ class SecurityHeadersMiddleware:
         await self.app(scope, receive, send_with_security_headers)
 
 
-def _verify_auth(request: Request) -> bool:
-    """Verify request authorization against MUSEPILOT_API_TOKEN if configured."""
-    settings = getattr(request.app.state, "settings", None) or get_settings()
-    if not settings.api_token:
-        return True
-
-    auth_header = request.headers.get("authorization", "")
+def _extract_token(headers: Any, query_params: Any) -> str | None:
+    """Extract bearer/api-key/query token from headers or query parameters."""
+    auth_header = headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
-        token = auth_header[7:].strip()
-        if hmac.compare_digest(token, settings.api_token):
+        return auth_header[7:].strip()
+    api_key = headers.get("x-api-key", "").strip()
+    if api_key:
+        return api_key
+    query_token = query_params.get("token", "").strip()
+    if query_token:
+        return query_token
+    return None
+
+
+def _is_token_authorized(token: str | None, settings: Any) -> bool:
+    """Validate token against configured JWT or API token settings."""
+    has_auth_configured = bool(
+        getattr(settings, "api_token", "")
+        or getattr(settings, "jwt_secret", "")
+        or getattr(settings, "jwt_token", "")
+    )
+    if not has_auth_configured:
+        return True  # Dev mode: open
+
+    if not token:
+        return False
+
+    # 1. Exact match against static JWT token from .env
+    jwt_tok = getattr(settings, "jwt_token", "")
+    if jwt_tok and hmac.compare_digest(token, jwt_tok.strip()):
+        return True
+
+    # 2. Exact match against API token from .env
+    api_tok = getattr(settings, "api_token", "")
+    if api_tok and hmac.compare_digest(token, api_tok.strip()):
+        return True
+
+    # 3. Cryptographic signature verification via JWT secret from .env
+    jwt_sec = getattr(settings, "jwt_secret", "")
+    if jwt_sec:
+        try:
+            decode_and_verify_jwt(
+                token,
+                secret=jwt_sec,
+                allowed_algorithms=(getattr(settings, "jwt_algorithm", "HS256"),),
+            )
             return True
-
-    api_key = request.headers.get("x-api-key", "").strip()
-    if api_key and hmac.compare_digest(api_key, settings.api_token):
-        return True
-
-    query_token = request.query_params.get("token", "").strip()
-    if query_token and hmac.compare_digest(query_token, settings.api_token):
-        return True
+        except JWTError as exc:
+            logger.debug(f"JWT verification rejected: {exc}")
 
     return False
+
+
+def _verify_auth(request: Request) -> bool:
+    """Verify request authorization against JWT or API token configuration."""
+    settings = getattr(request.app.state, "settings", None) or get_settings()
+    token = _extract_token(request.headers, request.query_params)
+    return _is_token_authorized(token, settings)
 
 
 def _verify_ws_auth(websocket: WebSocket) -> bool:
-    """Verify WebSocket authorization against MUSEPILOT_API_TOKEN if configured."""
+    """Verify WebSocket authorization against JWT or API token configuration."""
     settings = getattr(websocket.app.state, "settings", None) or get_settings()
-    if not settings.api_token:
-        return True
-
-    auth_header = websocket.headers.get("authorization", "")
-    if auth_header.lower().startswith("bearer "):
-        token = auth_header[7:].strip()
-        if hmac.compare_digest(token, settings.api_token):
-            return True
-
-    api_key = websocket.headers.get("x-api-key", "").strip()
-    if api_key and hmac.compare_digest(api_key, settings.api_token):
-        return True
-
-    query_token = websocket.query_params.get("token", "").strip()
-    if query_token and hmac.compare_digest(query_token, settings.api_token):
-        return True
-
-    return False
+    token = _extract_token(websocket.headers, websocket.query_params)
+    return _is_token_authorized(token, settings)
 
 
 def _error(message: str, status_code: int) -> JSONResponse:
@@ -792,16 +819,37 @@ async def get_benchmark(_request: Request) -> JSONResponse:
 
 async def stream_run_spans(websocket: WebSocket) -> None:
     """Stream live telemetry spans for a run, then send the final trace."""
+    settings = getattr(websocket.app.state, "settings", None) or get_settings()
+
+    # Rate limiting on WebSocket connections
+    if getattr(settings, "rate_limit_enabled", True):
+        client_ip = websocket.client.host if websocket.client else "127.0.0.1"
+        limit = getattr(settings, "rate_limit_mutation_per_minute", 30)
+        allowed, _, retry_after = GLOBAL_RATE_LIMITER.check(f"{client_ip}:mutation", limit=limit)
+        if not allowed:
+            await websocket.accept()
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "detail": f"Rate limit exceeded ({limit} requests/minute). Please slow down.",
+                    "retry_after": retry_after,
+                }
+            )
+            await websocket.close(code=4429)
+            return
+
     if not _verify_ws_auth(websocket):
         await websocket.accept()
         await websocket.send_json(
-            {"type": "error", "detail": "Unauthorized: valid API token required."}
+            {"type": "error", "detail": "Unauthorized: valid JWT or API token required."}
         )
         await websocket.close(code=4401)
         return
     await websocket.accept()
     try:
         payload = await websocket.receive_json()
+    except WebSocketDisconnect:
+        return
     except (json.JSONDecodeError, RuntimeError):
         await websocket.send_json({"type": "error", "detail": "Request must be valid JSON."})
         await websocket.close()
@@ -918,6 +966,11 @@ def create_app(settings: Any | None = None) -> Starlette:
         allow_credentials=True,
     )
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(
+        RateLimitMiddleware,
+        limiter=GLOBAL_RATE_LIMITER,
+        settings_getter=lambda: getattr(app.state, "settings", active_settings),
+    )
     app.state.settings = active_settings
     app.state.run_lock = asyncio.Lock()
     return app

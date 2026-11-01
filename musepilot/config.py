@@ -267,6 +267,34 @@ class MusePilotSettings(BaseSettings):
         default="",
         description="Optional enterprise API authentication token. When non-empty, requires Bearer or X-API-Key token.",
     )
+    jwt_secret: str = Field(
+        default="",
+        description="HMAC secret key to sign and verify JSON Web Tokens (override via MUSEPILOT_JWT_SECRET)",
+    )
+    jwt_token: str = Field(
+        default="",
+        description="Static pre-issued JWT token accepted directly from .env (override via MUSEPILOT_JWT_TOKEN)",
+    )
+    jwt_algorithm: str = Field(
+        default="HS256",
+        description="Cryptographic algorithm for JWT verification (default: HS256)",
+    )
+    rate_limit_enabled: bool = Field(
+        default=True,
+        description="Enable/disable API rate limiting (override via MUSEPILOT_RATE_LIMIT_ENABLED)",
+    )
+    rate_limit_read_per_minute: int = Field(
+        default=120,
+        gt=0,
+        le=10000,
+        description="Read-endpoint sliding-window rate limit per IP per minute",
+    )
+    rate_limit_mutation_per_minute: int = Field(
+        default=30,
+        gt=0,
+        le=1000,
+        description="Compute-heavy execution mutation rate limit per IP per minute",
+    )
     max_upload_bytes: int = Field(
         default=25 * 1024 * 1024,
         gt=0,

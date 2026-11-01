@@ -139,6 +139,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     # `health` command
     sub.add_parser("health", help="Run pre-flight calibration and compliance checks")
+
+    # `jwt-token` command
+    jwt_p = sub.add_parser(
+        "jwt-token", help="Generate an enterprise HS256 JWT for API authentication"
+    )
+    jwt_p.add_argument("--subject", "-s", default="operator", help="Subject claim (sub) for token")
+    jwt_p.add_argument(
+        "--hours", type=int, default=24, help="Token validity lifetime in hours (default: 24)"
+    )
+    jwt_p.add_argument(
+        "--secret",
+        default=None,
+        help="Secret HMAC key (defaults to MUSEPILOT_JWT_SECRET from config)",
+    )
     return parser
 
 
@@ -151,6 +165,29 @@ def main(argv: list[str] | None = None) -> int:
         report = run_health_check()
         print(json.dumps(asdict(report), indent=2))
         return 0 if report.passed else 1
+
+    if args.command == "jwt-token":
+        from musepilot.config import get_settings
+        from musepilot.security import generate_jwt
+
+        secret = (
+            args.secret or get_settings().jwt_secret or "musepilot-dev-secret-change-in-production"
+        )
+        token = generate_jwt(
+            payload={"sub": args.subject, "iss": "musepilot", "role": "operator"},
+            secret=secret,
+            expires_in_seconds=args.hours * 3600,
+        )
+        print("\n=== MusePilot Enterprise JWT Token ===")
+        print(f"Subject:    {args.subject}")
+        print(f"Expires in: {args.hours} hours")
+        print(f"Token:\n{token}\n")
+        print("To authenticate clients, pass header:")
+        print(f"Authorization: Bearer {token}\n")
+        print("Or configure in your .env file:")
+        print(f"MUSEPILOT_JWT_SECRET={secret}")
+        print(f"MUSEPILOT_JWT_TOKEN={token}\n")
+        return 0
 
     if args.command == "run":
         driver = get_device_driver(args.driver, serial=args.adb_serial)
