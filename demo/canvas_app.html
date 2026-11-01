@@ -2,62 +2,128 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MusePilot Frontier Target — Pure HTML5 Canvas Simulation Console (0 DOM Controls)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Northbeam Studio — Transmitter Calibration Console</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #0b0f19;
-      color: #e2e8f0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      background: #0c0e12;
+      color: #dbe2ea;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 16px;
+      padding: 20px 16px 28px;
+      min-height: 100vh;
     }
-    .banner {
+    .demo-bar {
       width: 1280px;
+      max-width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #111827;
-      border: 1px solid #1f2937;
+      gap: 16px;
+      background: #14181f;
+      border: 1px solid #232a34;
       padding: 10px 18px;
-      border-radius: 8px;
-      margin-bottom: 12px;
+      border-radius: 10px;
+      margin-bottom: 14px;
       font-size: 13px;
     }
-    .badge {
-      background: #065f46;
-      color: #6ee7b7;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-weight: 600;
+    .demo-bar .title { font-weight: 650; color: #f2f5f8; }
+    .demo-bar .sub { color: #8b95a3; font-size: 12px; margin-top: 2px; }
+    .demo-bar code {
+      background: #0c0e12;
+      border: 1px solid #232a34;
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-size: 12px;
+      color: #a9c6ff;
     }
+    .demo-bar .controls { display: flex; align-items: center; gap: 10px; }
+    .demo-bar .hint { color: #8b95a3; font-size: 12px; }
+    .demo-bar kbd {
+      background: #0c0e12;
+      border: 1px solid #2c3542;
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      padding: 1px 7px;
+      font-size: 12px;
+      font-family: inherit;
+    }
+    #som-toggle {
+      background: #1d6ff2;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #som-toggle:hover { background: #3b8bff; }
+    #som-toggle.off { background: #2a323d; color: #aeb7c2; }
     canvas {
-      border: 2px solid #334155;
-      border-radius: 10px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
-      cursor: crosshair;
+      border: 1px solid #232a34;
+      border-radius: 12px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      max-width: 100%;
+      height: auto;
+    }
+    .demo-foot {
+      width: 1280px;
+      max-width: 100%;
+      margin-top: 12px;
+      color: #6d7683;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
     }
   </style>
 </head>
 <body>
-  <div class="banner">
+  <div class="demo-bar">
     <div>
-      <strong>MUSEPILOT FRONTIER TARGET</strong> — Inspect DOM: Only a single <code>&lt;canvas&gt;</code> node exists (Zero Accessibility Tree Nodes)
+      <div class="title">Northbeam Studio &mdash; live calibration console</div>
+      <div class="sub">The product UI below is a single <code>&lt;canvas&gt;</code> node: no buttons, inputs, or links exist in the DOM. Verify in DevTools.</div>
     </div>
-    <div>
-      Press <strong>[M]</strong> to toggle live SAM 3.1 Set-of-Mark Overlays • <span class="badge" id="som-indicator">SAM 3.1 SoM: ON</span>
+    <div class="controls">
+      <span class="hint">Overlays <kbd>M</kbd></span>
+      <button id="som-toggle" type="button">Overlays on</button>
     </div>
   </div>
 
-  <!-- Zero child DOM elements: all controls are rendered purely inside this HTML5 Canvas -->
-  <canvas id="frontier-canvas" width="1280" height="720"></canvas>
+  <!-- The entire product UI renders inside this one canvas element. -->
+  <canvas id="studio-canvas" width="1280" height="720"></canvas>
+
+  <div class="demo-foot">
+    <span>Click the frequency, damping, gain, and benchmark controls to run a calibration.</span>
+    <span>Demo target for zero-DOM visual grounding</span>
+  </div>
 
   <script>
-    const canvas = document.getElementById("frontier-canvas");
+    const canvas = document.getElementById("studio-canvas");
     const ctx = canvas.getContext("2d");
-    const somBadge = document.getElementById("som-indicator");
+    const somToggle = document.getElementById("som-toggle");
+
+    const T = {
+      appBg: "#151a22",
+      navBg: "#10141b",
+      sideBg: "#10141b",
+      cardBg: "#1b212b",
+      cardBorder: "#2a3340",
+      fieldBg: "#12161d",
+      ink: "#eef2f6",
+      inkDim: "#9aa5b2",
+      inkFaint: "#69727f",
+      accent: "#2f7bff",
+      accentDark: "#1d5fd0",
+      green: "#22b573",
+      greenDim: "#123f2c",
+      amber: "#e8a13c",
+      red: "#e5484d",
+      trackBg: "#2b3442",
+    };
 
     let state = {
       sliderPct: 35,
@@ -65,147 +131,515 @@
       gainValue: "0.942",
       benchmarkConverged: false,
       showSoM: true,
-      activeMask: null,
-      verifiedMasks: new Set()
+      verifiedMasks: new Set(),
     };
 
+    // Interactive regions. Geometry doubles as the grounding targets.
+    // Colors stay distinct from green, which is reserved for verified state.
     const masks = [
-      { id: 1, x: 100, y: 130, w: 420, h: 64, color: "#38bdf8", label: "Frequency Slider" },
-      { id: 2, x: 100, y: 250, w: 280, h: 68, color: "#a855f7", label: "Adaptive Damping" },
-      { id: 3, x: 100, y: 375, w: 420, h: 68, color: "#fb923c", label: "Gain Coefficient" },
-      { id: 4, x: 100, y: 505, w: 340, h: 76, color: "#34d399", label: "Run Benchmark" }
+      { id: 1, x: 224, y: 140, w: 616, h: 100, color: "#4aa8ff", label: "Frequency" },
+      { id: 2, x: 224, y: 268, w: 616, h: 88, color: "#f59e0b", label: "Damping" },
+      { id: 3, x: 224, y: 384, w: 616, h: 88, color: "#f43f5e", label: "Gain" },
+      { id: 4, x: 224, y: 500, w: 616, h: 58, color: "#eab308", label: "Run" },
     ];
 
-    function render() {
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
+    const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
-      // Header inside canvas
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(0, 0, canvas.width, 58);
-      ctx.fillStyle = "#7dd3fc";
-      ctx.font = "bold 16px monospace";
-      ctx.fillText("WEBGL / CANVAS SIMULATION CALIBRATION ENGINE // ZERO-DOM INTERFACE", 28, 35);
+    function rr(x, y, w, h, r) {
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+      else ctx.rect(x, y, w, h);
+    }
 
-      // Control 1: Frequency Slider
-      const m1 = masks[0];
-      ctx.fillStyle = "#cbd5e1";
-      ctx.font = "14px monospace";
-      ctx.fillText(`1. FREQUENCY TARGET SLIDER: ${state.sliderPct}%`, m1.x, m1.y - 10);
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(m1.x, m1.y, m1.w, m1.h);
-      ctx.fillStyle = state.sliderPct === 75 ? "#10b981" : "#0284c7";
-      ctx.fillRect(m1.x + 6, m1.y + 6, ((m1.w - 12) * state.sliderPct) / 100, m1.h - 12);
+    function card(x, y, w, h) {
+      rr(x, y, w, h, 12);
+      ctx.fillStyle = T.cardBg;
+      ctx.fill();
+      ctx.strokeStyle = T.cardBorder;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
 
-      // Control 2: Adaptive Damping Toggle
-      const m2 = masks[1];
-      ctx.fillStyle = state.dampingEnabled ? "#10b981" : "#334155";
-      ctx.fillRect(m2.x, m2.y, m2.w, m2.h);
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 15px monospace";
-      ctx.fillText(
-        `ADAPTIVE DAMPING: ${state.dampingEnabled ? "ENABLED [ON]" : "OFF"}`,
-        m2.x + 22,
-        m2.y + 40
-      );
+    function text(str, x, y, { font = `13px ${SANS}`, color = T.ink, align = "left" } = {}) {
+      ctx.font = font;
+      ctx.fillStyle = color;
+      ctx.textAlign = align;
+      ctx.fillText(str, x, y);
+      ctx.textAlign = "left";
+    }
 
-      // Control 3: Gain Coefficient Input
-      const m3 = masks[2];
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(m3.x, m3.y, m3.w, m3.h);
-      ctx.strokeStyle = "#38bdf8";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(m3.x, m3.y, m3.w, m3.h);
-      ctx.fillStyle = "#6ee7b7";
-      ctx.fillText(`GAIN_COEFF: ${state.gainValue} [LOCKED]`, m3.x + 20, m3.y + 40);
+    function dot(x, y, r, color) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
 
-      // Control 4: Run Benchmark Button
-      const m4 = masks[3];
-      ctx.fillStyle = state.benchmarkConverged ? "#059669" : "#2563eb";
-      ctx.fillRect(m4.x, m4.y, m4.w, m4.h);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillText(
-        state.benchmarkConverged ? "BENCHMARK VERIFIED [OK]" : "RUN BENCHMARK SIMULATION",
-        m4.x + 32,
-        m4.y + 44
-      );
+    // --- Top navigation -------------------------------------------------
+    function drawNav() {
+      ctx.fillStyle = T.navBg;
+      ctx.fillRect(0, 0, 1280, 56);
+      ctx.strokeStyle = T.cardBorder;
+      ctx.beginPath();
+      ctx.moveTo(0, 56.5);
+      ctx.lineTo(1280, 56.5);
+      ctx.stroke();
 
-      // Right-hand Waveform Viewport
-      ctx.fillStyle = "#090d16";
-      ctx.fillRect(600, 100, 620, 540);
-      ctx.strokeStyle = "#334155";
-      ctx.strokeRect(600, 100, 620, 540);
-      ctx.fillStyle = state.benchmarkConverged ? "#34d399" : "#facc15";
-      ctx.fillText(
-        state.benchmarkConverged
-          ? "VERIFIER VERDICT: PASS // Q-FACTOR = 99.4% (CONVERGED)"
-          : "VERIFIER STATUS: AWAITING CALIBRATION STEPS...",
-        630,
-        140
-      );
+      // Logo mark
+      rr(24, 16, 24, 24, 6);
+      ctx.fillStyle = T.accent;
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = `bold 13px ${SANS}`;
+      ctx.fillText("N", 31, 33);
+      text("Northbeam Studio", 56, 34, { font: `600 15px ${SANS}` });
 
-      for (let i = 0; i < 12; i++) {
-        const bx = 640 + i * 46;
-        const bh = state.benchmarkConverged ? 150 + ((i * 37) % 220) : 70 + ((i * 19) % 100);
-        ctx.fillStyle = state.benchmarkConverged ? "#10b981" : "#38bdf8";
-        ctx.fillRect(bx, 580 - bh, 28, bh);
-      }
-
-      // Render SAM 3.1 Set-of-Mark Overlays
-      if (state.showSoM) {
-        masks.forEach((m) => {
-          const isVerified = state.verifiedMasks.has(m.id);
-          const stroke = isVerified ? "#22c55e" : m.color;
-          ctx.save();
-          ctx.strokeStyle = stroke;
-          ctx.lineWidth = 3;
-          ctx.strokeRect(m.x, m.y, m.w, m.h);
-
-          // Centroid crosshair
-          const cx = m.x + m.w / 2;
-          const cy = m.y + m.h / 2;
-          ctx.beginPath();
-          ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-          ctx.fillStyle = "#ffffff";
-          ctx.fill();
-
-          // Numbered Badge Pill
-          ctx.fillStyle = stroke;
-          ctx.fillRect(m.x, m.y - 24, isVerified ? 68 : 42, 22);
-          ctx.fillStyle = "#090d16";
-          ctx.font = "bold 13px monospace";
-          ctx.fillText(isVerified ? `[0${m.id}] OK` : `[0${m.id}]`, m.x + 5, m.y - 8);
-          ctx.restore();
+      // Nav links
+      const links = ["Overview", "Calibrate", "Waveforms", "Benchmarks"];
+      let lx = 300;
+      links.forEach((link) => {
+        const active = link === "Calibrate";
+        text(link, lx, 35, {
+          font: `${active ? "600" : "400"} 13px ${SANS}`,
+          color: active ? T.ink : T.inkDim,
         });
+        if (active) {
+          const w = ctx.measureText(link).width;
+          ctx.fillStyle = T.accent;
+          ctx.fillRect(lx, 46, w, 2);
+        }
+        lx += ctx.measureText(link).width + 36;
+      });
+
+      // Environment pill + operator + avatar
+      rr(1006, 15, 84, 26, 13);
+      ctx.fillStyle = T.greenDim;
+      ctx.fill();
+      dot(1022, 28, 4, T.green);
+      text("Staging", 1032, 32, { font: `600 12px ${SANS}`, color: "#7ee2ae" });
+      text("A. Keller", 1168, 32, { font: `500 12px ${SANS}`, color: T.inkDim, align: "right" });
+      dot(1198, 28, 14, "#334155");
+      text("AK", 1198, 32, { font: `600 11px ${SANS}`, color: "#dbe2ea", align: "center" });
+    }
+
+    // --- Sidebar --------------------------------------------------------
+    function glyph(kind, x, y, color) {
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      if (kind === "grid") {
+        ctx.rect(x, y, 6, 6); ctx.rect(x + 8, y, 6, 6);
+        ctx.rect(x, y + 8, 6, 6); ctx.rect(x + 8, y + 8, 6, 6);
+        ctx.stroke();
+      } else if (kind === "sliders") {
+        [0, 1, 2].forEach((i) => {
+          const gy = y + i * 5;
+          ctx.moveTo(x, gy); ctx.lineTo(x + 14, gy);
+          ctx.moveTo(x + 3 + i * 4, gy - 2.5); ctx.lineTo(x + 3 + i * 4, gy + 2.5);
+        });
+        ctx.stroke();
+      } else if (kind === "wave") {
+        ctx.moveTo(x, y + 7);
+        ctx.bezierCurveTo(x + 3, y - 3, x + 6, y + 17, x + 9, y + 7);
+        ctx.bezierCurveTo(x + 11, y + 1, x + 12, y + 5, x + 14, y + 7);
+        ctx.stroke();
+      } else if (kind === "check") {
+        ctx.moveTo(x, y + 7); ctx.lineTo(x + 5, y + 12); ctx.lineTo(x + 14, y + 1);
+        ctx.stroke();
+      } else if (kind === "chip") {
+        ctx.strokeRect(x + 3, y + 3, 8, 8);
+        [[3, 0], [11, 0], [3, 14], [11, 14], [0, 5], [0, 9], [14, 5], [14, 9]].forEach(([dx, dy]) => {
+          ctx.moveTo(x + dx, y + dy);
+          ctx.lineTo(x + dx + (dx === 0 ? 3 : dx === 14 ? -3 : 0), y + dy + (dy === 0 ? 3 : dy === 14 ? -3 : 0));
+        });
+        ctx.stroke();
+      } else {
+        ctx.arc(x + 7, y + 7, 4, 0, Math.PI * 2);
+        ctx.stroke();
+        dot(x + 7, y + 7, 1.5, color);
       }
+    }
+
+    function drawSidebar() {
+      ctx.fillStyle = T.sideBg;
+      ctx.fillRect(0, 56, 200, 628);
+      ctx.strokeStyle = T.cardBorder;
+      ctx.beginPath();
+      ctx.moveTo(200.5, 56);
+      ctx.lineTo(200.5, 684);
+      ctx.stroke();
+
+      text("Workspace", 24, 92, { font: `600 11px ${SANS}`, color: T.inkFaint });
+      const items = [
+        ["Overview", "grid", false],
+        ["Calibration", "sliders", true],
+        ["Waveforms", "wave", false],
+        ["Benchmarks", "check", false],
+        ["Devices", "chip", false],
+        ["Settings", "gear", false],
+      ];
+      items.forEach(([label, icon, active], i) => {
+        const iy = 108 + i * 40;
+        if (active) {
+          rr(12, iy - 6, 176, 32, 8);
+          ctx.fillStyle = "#1e2632";
+          ctx.fill();
+        }
+        glyph(icon, 26, iy + 2, active ? T.ink : T.inkFaint);
+        text(label, 52, iy + 13, {
+          font: `${active ? "600" : "400"} 13px ${SANS}`,
+          color: active ? T.ink : T.inkDim,
+        });
+      });
+
+      // Storage meter at the bottom
+      text("Trace storage", 24, 596, { font: `600 11px ${SANS}`, color: T.inkFaint });
+      rr(24, 606, 152, 6, 3);
+      ctx.fillStyle = T.trackBg;
+      ctx.fill();
+      rr(24, 606, 96, 6, 3);
+      ctx.fillStyle = T.accent;
+      ctx.fill();
+      text("61 of 100 GB", 24, 626, { font: `12px ${SANS}`, color: T.inkDim });
+    }
+
+    // --- Main: calibration cards ----------------------------------------
+    function drawHeader() {
+      text("Transmitter calibration", 224, 90, { font: `650 20px ${SANS}` });
+      text("Tune the TB-4 bench unit, then run the conformance benchmark.", 224, 110, {
+        font: `13px ${SANS}`,
+        color: T.inkDim,
+      });
+      const done = state.benchmarkConverged;
+      rr(716, 72, done ? 124 : 132, 26, 13);
+      ctx.fillStyle = done ? T.greenDim : "#2a3340";
+      ctx.fill();
+      dot(732, 85, 4, done ? T.green : T.amber);
+      text(done ? "Calibrated" : "In progress", 742, 89, {
+        font: `600 12px ${SANS}`,
+        color: done ? "#7ee2ae" : "#e8c07a",
+      });
+    }
+
+    function drawSliderCard() {
+      const m = masks[0];
+      card(m.x, m.y, m.w, m.h);
+      text("Frequency response", m.x + 20, m.y + 30, { font: `600 14px ${SANS}` });
+      const atTarget = state.sliderPct === 75;
+      text(`${state.sliderPct}%`, m.x + m.w - 20, m.y + 30, {
+        font: `650 14px ${MONO}`,
+        color: atTarget ? "#7ee2ae" : T.ink,
+        align: "right",
+      });
+      text(atTarget ? "On target" : "Target 75%", m.x + m.w - 20, m.y + 50, {
+        font: `12px ${SANS}`,
+        color: atTarget ? T.green : T.inkFaint,
+        align: "right",
+      });
+
+      // Track
+      const tx = m.x + 20, tw = m.w - 40, ty = m.y + 58;
+      rr(tx, ty, tw, 8, 4);
+      ctx.fillStyle = T.trackBg;
+      ctx.fill();
+      const fillW = Math.max(8, (tw * state.sliderPct) / 100);
+      rr(tx, ty, fillW, 8, 4);
+      ctx.fillStyle = atTarget ? T.green : T.accent;
+      ctx.fill();
+      // Knob
+      const kx = tx + (tw * state.sliderPct) / 100;
+      dot(kx, ty + 4, 10, "#fff");
+      dot(kx, ty + 4, 10, "rgba(0,0,0,0)");
+      ctx.beginPath();
+      ctx.arc(kx, ty + 4, 10, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+      ctx.strokeStyle = atTarget ? T.green : T.accent;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    function drawDampingCard() {
+      const m = masks[1];
+      card(m.x, m.y, m.w, m.h);
+      text("Adaptive damping", m.x + 20, m.y + 32, { font: `600 14px ${SANS}` });
+      text("Suppress resonance drift during sweeps.", m.x + 20, m.y + 54, {
+        font: `12px ${SANS}`,
+        color: T.inkDim,
+      });
+      text(state.dampingEnabled ? "Enabled" : "Disabled", m.x + 20, m.y + 74, {
+        font: `600 12px ${SANS}`,
+        color: state.dampingEnabled ? "#7ee2ae" : T.inkFaint,
+      });
+      // Toggle switch
+      const tw = 52, th = 28, tx = m.x + m.w - 20 - tw, ty = m.y + (m.h - th) / 2;
+      rr(tx, ty, tw, th, 14);
+      ctx.fillStyle = state.dampingEnabled ? T.green : "#333d4b";
+      ctx.fill();
+      dot(state.dampingEnabled ? tx + tw - 14 : tx + 14, ty + 14, 10, "#fff");
+    }
+
+    function drawGainCard() {
+      const m = masks[2];
+      card(m.x, m.y, m.w, m.h);
+      text("Gain coefficient", m.x + 20, m.y + 32, { font: `600 14px ${SANS}` });
+      text("Front-end amplifier trim, locked after verification.", m.x + 20, m.y + 54, {
+        font: `12px ${SANS}`,
+        color: T.inkDim,
+      });
+      // Value field
+      rr(m.x + m.w - 220, m.y + 22, 130, 48, 8);
+      ctx.fillStyle = T.fieldBg;
+      ctx.fill();
+      ctx.strokeStyle = T.cardBorder;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      text(state.gainValue, m.x + m.w - 155, m.y + 52, {
+        font: `600 17px ${MONO}`,
+        align: "center",
+      });
+      rr(m.x + m.w - 78, m.y + 34, 58, 24, 12);
+      ctx.fillStyle = "#2a3340";
+      ctx.fill();
+      text("Locked", m.x + m.w - 49, m.y + 50, {
+        font: `600 11px ${SANS}`,
+        color: T.inkDim,
+        align: "center",
+      });
+    }
+
+    function drawRunButton() {
+      const m = masks[3];
+      const done = state.benchmarkConverged;
+      rr(m.x, m.y, m.w, m.h, 10);
+      ctx.fillStyle = done ? T.green : T.accent;
+      ctx.fill();
+      if (!done) {
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fillRect(m.x, m.y, m.w, 1);
+      }
+      text(done ? "Benchmark passed" : "Run benchmark", m.x + m.w / 2, m.y + 36, {
+        font: `600 15px ${SANS}`,
+        color: "#fff",
+        align: "center",
+      });
+      if (done) {
+        // Check mark
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(m.x + m.w / 2 - 92, m.y + 32);
+        ctx.lineTo(m.x + m.w / 2 - 85, m.y + 39);
+        ctx.lineTo(m.x + m.w / 2 - 73, m.y + 25);
+        ctx.stroke();
+      }
+    }
+
+    function drawRecentRuns() {
+      card(224, 574, 616, 94);
+      text("Recent runs", 244, 598, { font: `600 13px ${SANS}` });
+      const runs = [
+        ["Nightly conformance sweep", "Today 06:00", true],
+        ["Pre-release verification", "Yesterday 18:02", true],
+      ];
+      runs.forEach(([name, when, passed], i) => {
+        const ry = 612 + i * 26;
+        dot(244, ry - 4, 4, passed ? T.green : T.amber);
+        text(name, 256, ry, { font: `12px ${SANS}`, color: T.inkDim });
+        text(passed ? `Passed · ${when}` : when, 820, ry, {
+          font: `12px ${SANS}`,
+          color: passed ? "#7ee2ae" : T.amber,
+          align: "right",
+        });
+      });
+    }
+
+    // --- Right rail: spectrum + session ---------------------------------
+    function drawSpectrum() {
+      card(856, 128, 400, 300);
+      text("Spectrum", 876, 156, { font: `600 14px ${SANS}` });
+      text(state.benchmarkConverged ? "Live · converged" : "Live", 1236, 156, {
+        font: `12px ${SANS}`,
+        color: state.benchmarkConverged ? "#7ee2ae" : T.inkFaint,
+        align: "right",
+      });
+      // Viewport
+      rr(876, 168, 360, 200, 8);
+      ctx.fillStyle = "#0b0f15";
+      ctx.fill();
+      // Grid
+      ctx.strokeStyle = "#1c232e";
+      ctx.lineWidth = 1;
+      for (let g = 1; g < 5; g++) {
+        ctx.beginPath();
+        ctx.moveTo(876, 168 + g * 40);
+        ctx.lineTo(1236, 168 + g * 40);
+        ctx.stroke();
+      }
+      // Bars (deterministic)
+      const done = state.benchmarkConverged;
+      for (let i = 0; i < 24; i++) {
+        const seed = (i * 53 + 11) % 97;
+        const h = done ? 40 + (seed / 97) * 130 : 20 + (seed / 97) * 70;
+        const bx = 886 + i * 14.5;
+        ctx.fillStyle = done ? T.green : T.accent;
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(bx, 360 - h, 9, h);
+        ctx.globalAlpha = 1;
+      }
+      text(done ? "Q-factor 99.4% · noise floor −118 dBm" : "Awaiting calibration sweep…", 876, 392, {
+        font: `12px ${SANS}`,
+        color: done ? "#7ee2ae" : T.inkFaint,
+      });
+      // Legend
+      dot(876, 410, 4, done ? T.green : T.accent);
+      text("Channel A · 2.4 GHz", 886, 414, { font: `12px ${SANS}`, color: T.inkDim });
+    }
+
+    function drawSession() {
+      card(856, 444, 400, 180);
+      text("Session", 876, 472, { font: `600 14px ${SANS}` });
+      const rows = [
+        ["Device", "TB-4 bench unit (USB)"],
+        ["Operator", "A. Keller"],
+        ["Verdict", state.benchmarkConverged ? "Passed · Q 99.4%" : "Pending calibration"],
+      ];
+      rows.forEach(([k, v], i) => {
+        const ry = 492 + i * 34;
+        text(k, 876, ry + 12, { font: `12px ${SANS}`, color: T.inkFaint });
+        text(v, 1236, ry + 12, {
+          font: `${i === 2 && state.benchmarkConverged ? "600" : "500"} 12px ${SANS}`,
+          color: i === 2 ? (state.benchmarkConverged ? "#7ee2ae" : T.amber) : T.ink,
+          align: "right",
+        });
+        if (i < 2) {
+          ctx.strokeStyle = "#232b36";
+          ctx.beginPath();
+          ctx.moveTo(876, ry + 22);
+          ctx.lineTo(1236, ry + 22);
+          ctx.stroke();
+        }
+      });
+    }
+
+    function drawFooter() {
+      ctx.fillStyle = T.navBg;
+      ctx.fillRect(0, 684, 1280, 36);
+      ctx.strokeStyle = T.cardBorder;
+      ctx.beginPath();
+      ctx.moveTo(0, 684.5);
+      ctx.lineTo(1280, 684.5);
+      ctx.stroke();
+      dot(26, 702, 4, T.green);
+      text("Connected · TB-4 · 60 Hz telemetry", 36, 706, {
+        font: `12px ${SANS}`,
+        color: T.inkDim,
+      });
+      text("Northbeam Studio v2.4.1", 1256, 706, {
+        font: `12px ${SANS}`,
+        color: T.inkFaint,
+        align: "right",
+      });
+    }
+
+    // --- Set-of-Mark overlays -------------------------------------------
+    function drawSoM() {
+      masks.forEach((m) => {
+        const verified = state.verifiedMasks.has(m.id);
+        const stroke = verified ? T.green : m.color;
+        ctx.save();
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        rr(m.x, m.y, m.w, m.h, 10);
+        ctx.stroke();
+        // Centroid
+        const cx = m.x + m.w / 2;
+        const cy = m.y + m.h / 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = stroke;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+        ctx.fillStyle = stroke;
+        ctx.fill();
+        // Badge
+        const label = verified ? `0${m.id} · done` : `0${m.id}`;
+        ctx.font = `600 12px ${SANS}`;
+        const bw = ctx.measureText(label).width + 16;
+        rr(m.x, m.y - 26, bw, 22, 11);
+        ctx.fillStyle = stroke;
+        ctx.fill();
+        ctx.fillStyle = "#0b0f15";
+        ctx.fillText(label, m.x + 8, m.y - 11);
+        ctx.restore();
+      });
+    }
+
+    function render() {
+      ctx.fillStyle = T.appBg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawNav();
+      drawSidebar();
+      drawHeader();
+      drawSliderCard();
+      drawDampingCard();
+      drawGainCard();
+      drawRunButton();
+      drawRecentRuns();
+      drawSpectrum();
+      drawSession();
+      drawFooter();
+      if (state.showSoM) drawSoM();
+    }
+
+    function hitMask(x, y) {
+      return masks.find((m) => x >= m.x && x <= m.x + m.w && y >= m.y && y <= m.y + m.h) || null;
     }
 
     canvas.addEventListener("click", (e) => {
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      masks.forEach((m) => {
-        if (x >= m.x && x <= m.x + m.w && y >= m.y && y <= m.y + m.h) {
-          if (m.id === 1) state.sliderPct = 75;
-          if (m.id === 2) state.dampingEnabled = !state.dampingEnabled;
-          if (m.id === 3) state.gainValue = "0.942";
-          if (m.id === 4) state.benchmarkConverged = true;
-          state.verifiedMasks.add(m.id);
-          render();
-        }
-      });
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      const m = hitMask(x, y);
+      if (!m) return;
+      if (m.id === 1) state.sliderPct = 75;
+      if (m.id === 2) state.dampingEnabled = !state.dampingEnabled;
+      if (m.id === 3) state.gainValue = "0.942";
+      if (m.id === 4) state.benchmarkConverged = true;
+      state.verifiedMasks.add(m.id);
+      render();
     });
 
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      canvas.style.cursor = hitMask(x, y) ? "pointer" : "default";
+    });
+
+    function toggleSoM() {
+      state.showSoM = !state.showSoM;
+      somToggle.textContent = state.showSoM ? "Overlays on" : "Overlays off";
+      somToggle.classList.toggle("off", !state.showSoM);
+      render();
+    }
+
+    somToggle.addEventListener("click", toggleSoM);
     window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "m") {
-        state.showSoM = !state.showSoM;
-        somBadge.textContent = `SAM 3.1 SoM: ${state.showSoM ? "ON" : "OFF"}`;
-        render();
-      }
+      if (e.key.toLowerCase() === "m" && !e.metaKey && !e.ctrlKey) toggleSoM();
     });
 
     render();
   </script>
 </body>
 </html>
-
