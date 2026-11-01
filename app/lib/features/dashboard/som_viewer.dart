@@ -42,112 +42,11 @@ class _SomViewerState extends State<SomViewer> {
   ViewerLayer _activeLayer = ViewerLayer.som;
   int _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
 
-  String _cleanStateName(String raw) {
-    switch (raw) {
-      case 'initial':
-        return 'T0 · Initial grounding';
-      case 'step_1':
-        return 'T1 · Frequency slider (75%)';
-      case 'step_1_modal_dismissed':
-        return 'T1 · Modal dismissed (healed)';
-      case 'step_2':
-        return 'T2 · Damping circuit toggle';
-      case 'step_2_modal_blocked':
-        return 'T2 · Modal obstruction';
-      case 'step_3_final':
-        return 'T3 · Gain calibration (verified)';
-      case 'step_2_final':
-        return 'T2 · Cross-app dispatch complete';
-      default:
-        final words = raw.replaceAll('_', ' ').split(' ');
-        return words
-            .map(
-              (w) => w.isEmpty
-                  ? w
-                  : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}',
-            )
-            .join(' ');
-    }
-  }
-
-  Widget _statePill(String state) {
-    final isSelected = state == widget.selectedState;
-    final isObstructed = state.contains('modal_blocked');
-    final isHealed = state.contains('modal_dismissed');
-
-    Color pillColor;
-    if (isObstructed) {
-      pillColor = MetaTheme.coralAlert;
-    } else if (isHealed) {
-      pillColor = MetaTheme.emeraldVerified;
-    } else if (isSelected) {
-      pillColor = MetaTheme.metaBlueDark;
-    } else {
-      pillColor = MetaTheme.surfaceCardBorder;
-    }
-
-    return InkWell(
-      onTap: () => widget.onSelectState(state),
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? pillColor.withValues(alpha: 0.2)
-              : MetaTheme.surfaceCardElevated,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: isSelected ? pillColor : MetaTheme.surfaceCardBorder,
-            width: isSelected ? 1.5 : 1.0,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isObstructed)
-              const Icon(
-                Icons.warning_amber,
-                size: 12,
-                color: MetaTheme.coralAlert,
-              )
-            else if (isHealed)
-              const Icon(
-                Icons.auto_fix_high,
-                size: 12,
-                color: MetaTheme.emeraldVerified,
-              )
-            else
-              Icon(
-                Icons.circle,
-                size: 8,
-                color: isSelected ? MetaTheme.metaBlueDark : MetaTheme.inkMuted,
-              ),
-            const SizedBox(width: 6),
-            Text(
-              _cleanStateName(state),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected
-                    ? MetaTheme.inkPrimary
-                    : MetaTheme.inkSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isObstructed = widget.selectedState.contains('modal_blocked');
     final isHealed = widget.selectedState.contains('modal_dismissed');
-
-    final effectiveStates = widget.states.contains(widget.selectedState)
-        ? widget.states
-        : [...widget.states, widget.selectedState];
 
     final imageUrl = _activeLayer == ViewerLayer.som
         ? widget.api.somFrameUrl(
@@ -418,37 +317,6 @@ class _SomViewerState extends State<SomViewer> {
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Timeline scrubber / state badges
-          Row(
-            children: [
-              const Icon(
-                Icons.history_toggle_off,
-                size: 14,
-                color: MetaTheme.metaBlueDark,
-              ),
-              const SizedBox(width: 6),
-              Text('Execution timeline', style: theme.textTheme.labelLarge),
-              const Spacer(),
-              Text(
-                'Showing ${effectiveStates.indexOf(widget.selectedState) + 1} of ${effectiveStates.length} states',
-                style: const TextStyle(fontSize: 11, color: MetaTheme.inkMuted),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: effectiveStates.map((s) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _statePill(s),
-                );
-              }).toList(),
             ),
           ),
         ],
