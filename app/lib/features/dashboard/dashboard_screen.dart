@@ -43,6 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _ownsApi = true;
 
   int _selectedNavIndex = 0;
+  int _previousNavIndex = 0;
   bool _refreshing = true;
   bool _running = false;
   String? _error;
@@ -423,8 +424,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     color: MetaTheme.inkSecondary,
                     size: 20,
                   ),
-                  onDestinationSelected: (index) =>
-                      setState(() => _selectedNavIndex = index),
+                  onDestinationSelected: (index) {
+                    if (index == 5) {
+                      setState(() {
+                        if (_selectedNavIndex == 5) {
+                          _selectedNavIndex = _previousNavIndex;
+                          _showTerminal = false;
+                        } else {
+                          _previousNavIndex = _selectedNavIndex;
+                          _selectedNavIndex = 5;
+                          _showTerminal = true;
+                        }
+                      });
+                    } else {
+                      setState(() {
+                        _selectedNavIndex = index;
+                        _showTerminal = false;
+                      });
+                    }
+                  },
                   destinations: const [
                     NavigationRailDestination(
                       icon: Icon(Icons.dashboard_outlined),
@@ -451,39 +469,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       selectedIcon: Icon(Icons.analytics),
                       label: Text('Metrics'),
                     ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.terminal_outlined),
+                      selectedIcon: Icon(Icons.terminal),
+                      label: Text('MusePilot cli', textAlign: TextAlign.center),
+                    ),
                   ],
                 ),
               ),
 
-              // Bottom Terminal & Settings Action Icons
+              // Bottom Settings Action Icon
               Container(
                 width: 72,
                 color: MetaTheme.surfaceCard,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(
-                  children: [
-                    IconButton(
-                      tooltip: 'Cloud Shell Terminal',
-                      icon: Icon(
-                        _showTerminal ? Icons.terminal : Icons.terminal_outlined,
-                        color: _showTerminal ? MetaTheme.electricCyan : MetaTheme.inkSecondary,
-                        size: 20,
-                      ),
-                      onPressed: () => setState(() => _showTerminal = !_showTerminal),
-                    ),
-                    const SizedBox(height: 4),
-                    IconButton(
-                      tooltip: 'System Settings',
-                      icon: const Icon(
-                        Icons.settings_outlined,
-                        color: MetaTheme.inkSecondary,
-                        size: 20,
-                      ),
-                      onPressed: () {
-                        setState(() => _selectedNavIndex = 2); // Jump to SDK Hub & Infrastructure Gateway
-                      },
-                    ),
-                  ],
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: IconButton(
+                  tooltip: 'System Settings',
+                  icon: const Icon(
+                    Icons.settings_outlined,
+                    color: MetaTheme.inkSecondary,
+                    size: 22,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showTerminal = false;
+                      _selectedNavIndex = 2; // Jump to SDK Hub & Infrastructure Gateway
+                    });
+                  },
                 ),
               ),
             ],
@@ -552,8 +564,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
 
-                  // Tab 0: Mission Control
-                  if (_selectedNavIndex == 0) ...[
+                  // Tab 0: Mission Control (also active when MusePilot CLI drawer is toggled)
+                  if (_selectedNavIndex == 0 || _selectedNavIndex == 5) ...[
                     // Interactive Industry Solution Switcher
                     SolutionShowcaseBar(
                       selectedScenarioId: _selectedScenarioId,
@@ -764,7 +776,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (_showTerminal)
             TerminalDrawer(
               baseUrl: _baseUrl,
-              onClose: () => setState(() => _showTerminal = false),
+              onClose: () => setState(() {
+                _showTerminal = false;
+                if (_selectedNavIndex == 5) {
+                  _selectedNavIndex = _previousNavIndex;
+                }
+              }),
             ),
         ],
       ),
