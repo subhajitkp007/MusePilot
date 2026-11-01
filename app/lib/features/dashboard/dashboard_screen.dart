@@ -568,37 +568,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           final isWide = constraints.maxWidth > 950;
-                          final leftWidget = Column(
-                            children: [
-                              RunPanel(
-                                workflows: _workflows,
-                                selectedWorkflow: _workflow,
-                                onSelectWorkflow: (v) {
-                                  setState(() => _workflow = v);
-                                  _refresh();
-                                },
-                                injectModal: _injectModal,
-                                onInjectModal: (v) =>
-                                    setState(() => _injectModal = v),
-                                driver: _driver,
-                                onSelectDriver: (d) {
-                                  setState(() {
-                                    _driver = d;
-                                    if (d == 'adb' || d == 'desktop') {
-                                      _workflow = 'w2';
-                                    }
-                                  });
-                                },
-                                intentController: _intentController,
-                                running: _running,
-                                onRun: _run,
-                                spans: _spans,
-                                trace: _trace,
-                                baseUrl: _baseUrl,
-                                adbAvailable: _health?.adbAvailable ?? false,
-                                api: _api,
-                              ),
-                            ],
+                          final leftWidget = RunPanel(
+                            workflows: _workflows,
+                            selectedWorkflow: _workflow,
+                            onSelectWorkflow: (v) {
+                              setState(() => _workflow = v);
+                              _refresh();
+                            },
+                            injectModal: _injectModal,
+                            onInjectModal: (v) =>
+                                setState(() => _injectModal = v),
+                            driver: _driver,
+                            onSelectDriver: (d) {
+                              setState(() {
+                                _driver = d;
+                                if (d == 'adb' || d == 'desktop') {
+                                  _workflow = 'w2';
+                                }
+                              });
+                            },
+                            intentController: _intentController,
+                            running: _running,
+                            onRun: _run,
+                            spans: _spans,
+                            trace: _trace,
+                            baseUrl: _baseUrl,
+                            adbAvailable: _health?.adbAvailable ?? false,
+                            api: _api,
                           );
 
                           final rightWidget = SomViewer(
@@ -613,13 +609,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           );
 
                           if (isWide) {
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(flex: 5, child: leftWidget),
-                                const SizedBox(width: 14),
-                                Expanded(flex: 6, child: rightWidget),
-                              ],
+                            return IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(flex: 5, child: leftWidget),
+                                  const SizedBox(width: 14),
+                                  Expanded(flex: 6, child: rightWidget),
+                                ],
+                              ),
                             );
                           } else {
                             return Column(

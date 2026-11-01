@@ -5,6 +5,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -166,6 +167,43 @@ class MusePilotApi {
   Future<BenchmarkReport> getBenchmark() async => BenchmarkReport.fromJson(
     await _getJson('/api/benchmark') as Map<String, dynamic>,
   );
+
+  /// Transcribe a WAV voice command via Meta Muse Voice Transcribe.
+  ///
+  /// The server accepts multipart form data: field `audio` (WAV bytes) and
+  /// field `workflow_id`. In live mode this calls the Meta ASR API; in
+  /// simulated mode the server returns a calibrated fixture transcript.
+  Future<VoiceTranscript> transcribeAudio({
+    required Uint8List audioBytes,
+    String filename = 'command.wav',
+    String workflowId = 'w2',
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      _uri('/api/voice/transcribe'),
+    );
+    request.fields['workflow_id'] = workflowId;
+    request.files.add(
+      http.MultipartFile.fromBytes('audio', audioBytes, filename: filename),
+    );
+    late http.StreamedResponse streamed;
+    try {
+      streamed = await _client
+          .send(request)
+          .timeout(const Duration(seconds: 120));
+    } on TimeoutException {
+      throw ApiException(
+        'Voice transcribe request timed out.',
+        statusCode: 408,
+      );
+    } on Exception catch (e) {
+      throw ApiException('Cannot reach $baseUrl ($e).');
+    }
+    final response = await http.Response.fromStream(streamed);
+    return VoiceTranscript.fromJson(
+      _decode(response, '/api/voice/transcribe') as Map<String, dynamic>,
+    );
+  }
 
   /// Build a raw-frame image URL (traceId busts the image cache per run).
   String rawFrameUrl({

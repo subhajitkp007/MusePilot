@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Voice input: record spoken commands for server-side transcription. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
         android:label="musepilot_hud"
         android:name="${applicationName}"

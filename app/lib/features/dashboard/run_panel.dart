@@ -3,8 +3,12 @@
 /// Run configuration panel: workflow, target, intent, and live telemetry.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../core/api_client.dart';
+import '../../../core/voice_recorder.dart';
 import '../../../models/server.dart';
 import '../../../models/trace.dart';
 import '../../../theme/meta_theme.dart';
@@ -28,6 +32,8 @@ class RunPanel extends StatefulWidget {
     required this.trace,
     required this.baseUrl,
     required this.adbAvailable,
+    required this.api,
+    this.voiceRecorder,
     super.key,
   });
 
@@ -50,11 +56,29 @@ class RunPanel extends StatefulWidget {
   /// Whether the server currently sees an ADB device.
   final bool adbAvailable;
 
+  /// API client used for voice transcription uploads.
+  final MusePilotApi api;
+
+  /// Recorder override for tests; defaults to the platform recorder.
+  final VoiceRecorder? voiceRecorder;
+
   @override
   State<RunPanel> createState() => _RunPanelState();
 }
 
 class _RunPanelState extends State<RunPanel> {
+  static const int _maxRecordingSeconds = 60;
+
+  VoiceRecorder? _recorder;
+
+  /// Test override when provided, otherwise the lazily created platform
+  /// recorder (lazy so widget tests never touch platform channels).
+  VoiceRecorder get _effectiveRecorder =>
+      widget.voiceRecorder ?? (_recorder ??= PlatformVoiceRecorder());
+  bool _recording = false;
+  bool _transcribing = false;
+  int _elapsedSeconds = 0;
+  Timer? _elapsedTimer;
   List<String> get _quickPrompts {
     if (widget.driver == 'adb') {
       return const [
@@ -86,18 +110,27 @@ class _RunPanelState extends State<RunPanel> {
     setState(() {});
   }
 
-  /// Explain the supported voice-intake path instead of faking a mic.
-  ///
-  /// This console has no microphone capture; spoken commands are transcribed
-  /// server-side via `POST /api/voice/transcribe`, and the transcript is
-  /// pasted here as the run intent.
-  void _showVoiceGuidance() {
+  @override
+  void dispose() {
+    _elapsedTimer?.cancel();
+    _recorder?.dispose();
+    super.dispose();
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Manual fallback when the mic is unavailable: transcribe via curl.
+  void _showVoiceGuidance(String reason) {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Use voice input'),
+        title: const Text('Voice input unavailable'),
         content: Text(
-          'Record a WAV clip in any app, then transcribe it:\n\n'
+          '$reason\n\nRecord a WAV clip in any app, then transcribe it:\n\n'
           'curl -X POST ${widget.baseUrl}/api/voice/transcribe \\\n'
           '  -F "audio=@command.wav" -F "workflow_id=w2"\n\n'
           'Paste the returned transcript into the instruction box and run. '
@@ -110,6 +143,154 @@ class _RunPanelState extends State<RunPanel> {
           ),
         ],
       ),
+    );
+  }
+
+  String get _elapsedLabel {
+    final minutes = _elapsedSeconds ~/ 60;
+    final seconds = _elapsedSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  /// Starts recording, or stops and transcribes when already recording.
+  Future<void> _toggleRecording() async {
+    if (widget.running || _transcribing) return;
+    if (_recording) {
+      await _stopAndTranscribe();
+      return;
+    }
+    if (!_effectiveRecorder.isSupported) {
+      _showVoiceGuidance(
+        'This platform cannot capture microphone audio directly.',
+      );
+      return;
+    }
+    bool allowed;
+    try {
+      allowed = await _effectiveRecorder.hasPermission();
+    } on Exception {
+      _showVoiceGuidance('Microphone permission could not be requested.');
+      return;
+    }
+    if (!allowed) {
+      _showVoiceGuidance(
+        'Microphone permission was denied. Enable it in system settings, '
+        'or transcribe manually below.',
+      );
+      return;
+    }
+    try {
+      await _effectiveRecorder.start();
+    } on Exception catch (e) {
+      _snack('Could not start recording ($e).');
+      return;
+    }
+    setState(() {
+      _recording = true;
+      _elapsedSeconds = 0;
+    });
+    _elapsedTimer?.cancel();
+    _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_elapsedSeconds + 1 >= _maxRecordingSeconds) {
+        _stopAndTranscribe();
+        return;
+      }
+      setState(() => _elapsedSeconds += 1);
+    });
+  }
+
+  /// Stops the mic, uploads the WAV, and fills the intent with the transcript.
+  Future<void> _stopAndTranscribe() async {
+    if (!_recording) return;
+    _elapsedTimer?.cancel();
+    setState(() {
+      _recording = false;
+      _transcribing = true;
+    });
+    try {
+      final bytes = await _effectiveRecorder.stop();
+      if (bytes == null || bytes.isEmpty) {
+        _snack('No audio captured. Try recording again.');
+        return;
+      }
+      final transcript = await widget.api.transcribeAudio(
+        audioBytes: bytes,
+        workflowId: widget.selectedWorkflow,
+      );
+      if (!mounted) return;
+      setState(() {
+        widget.intentController.text = transcript.transcript;
+      });
+      _snack(
+        'Transcript ready '
+        '(${(transcript.confidence * 100).toStringAsFixed(0)}% confidence).',
+      );
+    } on ApiException catch (e) {
+      _snack('Transcription failed: ${e.message}');
+    } on Exception catch (e) {
+      _snack('Transcription failed ($e).');
+    } finally {
+      if (mounted) setState(() => _transcribing = false);
+    }
+  }
+
+  /// Voice button reflecting idle, recording, and transcribing states.
+  Widget _voiceButton() {
+    final disabled = widget.running || _transcribing;
+    if (_transcribing) {
+      return TextButton.icon(
+        icon: const SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        label: const Text(
+          'Transcribing…',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: MetaTheme.inkSecondary,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        ),
+        onPressed: null,
+      );
+    }
+    if (_recording) {
+      return TextButton.icon(
+        icon: Container(
+          width: 10,
+          height: 10,
+          decoration: const BoxDecoration(
+            color: MetaTheme.coralAlert,
+            shape: BoxShape.circle,
+          ),
+        ),
+        label: Text(
+          'Stop · $_elapsedLabel',
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: MetaTheme.coralAlert,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        ),
+        onPressed: _toggleRecording,
+      );
+    }
+    return TextButton.icon(
+      icon: const Icon(Icons.mic_none, size: 16),
+      label: const Text(
+        'Voice input',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      ),
+      style: TextButton.styleFrom(
+        foregroundColor: MetaTheme.inkSecondary,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      ),
+      onPressed: disabled ? null : _toggleRecording,
     );
   }
 
@@ -355,24 +536,7 @@ class _RunPanelState extends State<RunPanel> {
                   ),
                   child: Row(
                     children: [
-                      TextButton.icon(
-                        icon: const Icon(Icons.mic_none, size: 16),
-                        label: const Text(
-                          'Voice input',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: MetaTheme.inkSecondary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                        ),
-                        onPressed: widget.running ? null : _showVoiceGuidance,
-                      ),
+                      _voiceButton(),
                       const Spacer(),
                       TextButton.icon(
                         icon: const Icon(Icons.send, size: 14),
@@ -506,7 +670,7 @@ class _RunPanelState extends State<RunPanel> {
           ),
           const SizedBox(height: 6),
           Container(
-            height: 120,
+            height: 135,
             decoration: BoxDecoration(
               color: MetaTheme.obsidianBg,
               borderRadius: BorderRadius.circular(8),
