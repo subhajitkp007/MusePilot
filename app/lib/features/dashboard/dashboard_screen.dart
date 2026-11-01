@@ -589,20 +589,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(height: 10),
-
-                    // Headline Performance & Telemetry KPI Row (Compact, Placed below Run Control & Radar)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: MetricsRow(
-                        trace: _trace,
-                        liveRecords: _running ? _liveRecords : null,
-                        dpiScale: _health?.displayDpiScale ?? 2.0,
-                        verifierName:
-                            _config?.verifierDisplayName ?? 'Verifier',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
 
                     // Step plan graph (live records light up nodes during runs)
                     if (_trace?.plan.steps.isNotEmpty ?? false)
@@ -618,7 +605,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                     if (_trace?.plan.steps.isNotEmpty ?? false)
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
+
+                    // Headline Performance & Telemetry KPI Row (Placed under Steps Execution)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: MetricsRow(
+                        trace: _trace,
+                        liveRecords: _running ? _liveRecords : null,
+                        dpiScale: _health?.displayDpiScale ?? 2.0,
+                        verifierName:
+                            _config?.verifierDisplayName ?? 'Verifier',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
 
                     // Audit Ledger
                     Padding(

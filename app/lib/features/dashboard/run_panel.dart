@@ -431,56 +431,6 @@ class _RunPanelState extends State<RunPanel> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-
-          // Self-healing obstruction switch row
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: widget.injectModal
-                  ? MetaTheme.coralAlert.withValues(alpha: 0.08)
-                  : MetaTheme.surfaceCardElevated,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: widget.injectModal
-                    ? MetaTheme.coralAlert.withValues(alpha: 0.3)
-                    : MetaTheme.surfaceCardBorder,
-              ),
-            ),
-            child: Row(
-              children: [
-                Switch(
-                  value: widget.injectModal,
-                  activeThumbColor: MetaTheme.coralAlert,
-                  onChanged: widget.running || widget.selectedWorkflow != 'w2'
-                      ? null
-                      : (v) => widget.onInjectModal(v),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Inject transient modal (demonstrate self-healing)',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: widget.injectModal
-                              ? MetaTheme.coralAlert
-                              : MetaTheme.inkPrimary,
-                        ),
-                      ),
-                      Text(
-                        'Invalidates the visual cache and forces an autonomous replan on step 2.',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 14),
 
           // Primary run button
