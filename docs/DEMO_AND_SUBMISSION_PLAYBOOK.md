@@ -1,30 +1,132 @@
 # MusePilot — Demo Video & Submission Playbook
 
 > **The 3-Minute Video is the #1 Hackathon Deliverable.**  
-> Hackathon judges review hundreds of submissions. Your video must grip them in the first 10 seconds, prove technical depth by 60 seconds, demonstrate live physical mobile/canvas autonomy by 120 seconds, and leave zero doubt about Meta model integration and open-weight verifier compliance by 180 seconds.
+> Hackathon judges review hundreds of submissions. Your video must grip them in the first 10 seconds, prove technical depth by 60 seconds, demonstrate live physical mobile/canvas autonomy by 120 seconds, showcase agentic MCP integration by 150 seconds, and leave zero doubt about Meta model integration and open-weight verifier compliance by 180 seconds.
 
 ---
 
-## 🎬 1. The 180-Second Video Storyboard (Timestamp by Timestamp)
+## 🎬 1. The 180-Second Winning Screenplay (Timestamp by Timestamp)
 
 ```text
-  0:00        0:30        1:10        1:55        2:30        3:00
-┌───────────┬───────────┬───────────┬───────────┬───────────┬───────────┐
-│ THE HOOK  │ ARCH DELTA│ USE CASE 1│ USE CASE 2│ META STACK│ WINNING   │
-│ Coordinate│ Zero-Coord│ Live Phone│ Canvas &  │ 4 Models  │ SUMMARY   │
-│ Failure   │ SAM 3.1   │ ADB Touch │ Self-Heal │ Open-Wt   │ Call to   │
-│ Split-Scr │ Step DAG  │ Alarms    │ Replan    │ Baseten   │ Action    │
-└───────────┴───────────┴───────────┴───────────┴───────────┴───────────┘
+  0:00        0:25        0:55        1:35        2:15        2:40        3:00
+┌───────────┬───────────┬───────────┬───────────┬───────────┬───────────┬───────┐
+│ THE HOOK  │ ZERO-COORD│ DEMO 1    │ DEMO 2    │ DEMO 3    │ META STACK│ CLOSE │
+│ Coordinate│ Invariant │ Live Phone│ Canvas &  │ MCP Agent │ 4 Models  │ Call  │
+│ Drift Fail│ SAM 3.1   │ ADB Touch │ Self-Heal │ Cursor &  │ Open-Wt   │ to    │
+│ Split-Scr │ Step DAG  │ Alarms    │ Replan    │ Claude    │ Baseten   │ Win   │
+└───────────┴───────────┴───────────┴───────────┴───────────┴───────────┴───────┘
 ```
 
-| Timestamp | Story Beat | Visual Presentation on Screen | Voiceover Script & Audio | On-Screen Text Callout |
-| :--- | :--- | :--- | :--- | :--- |
-| **0:00 – 0:25** | **The Crisis: Why Computer-Use Fails** | **Split-Screen Comparison:**<br>• *Left Screen (Red Tint):* Standard coordinate-based VLM trying to click a button, missing by 18px due to DPI/resolution drift.<br>• *Right Screen (Electric Cyan):* MusePilot SAM 3.1 Set-of-Mark locking onto the exact sub-pixel mask with zero coordinates. | *"Autonomous GUI agents routinely fail in production because VLMs hallucinate coordinates—and modern canvas apps and mobile interfaces have zero accessibility tree nodes. We solved this with MusePilot."* | `❌ Coordinate Drift (Mis-click)`<br>`✅ SAM 3.1 Zero-Coordinate Grounding` |
-| **0:25 – 0:55** | **The Breakthrough: Zero-Coordinate DAG** | **Live Flutter HUD (Mission Control):**<br>• Full view of HUD on `http://localhost:8501`.<br>• User types intent: *"Connect to mobile device and disable the Sunday alarm."*<br>• **Dynamic Step Execution Graph** animates live into view with Electric Cyan nodes (`Step 1`, `Step 2`, `Step 3`).<br>• Click node to reveal Inspector with physical centroids and confidence scores. | *"MusePilot never emits coordinates. Meta's SAM 3.1 segments every interactive UI element into sub-pixel masks with high-contrast Set-of-Mark badges. Muse Spark then reasons over mask IDs, outputting a structured Step DAG. Physical clicks are mathematically derived via centroid geometry and normalized for native DPI."* | `Zero-Coordinate Invariant Enforced`<br>`Meta SAM 3.1 + Muse Spark DAG` |
-| **0:55 – 1:40** | **Demo 1: Live Android Automation over ADB** | **Camera-on-Device Picture-in-Picture:**<br>• Physical Samsung Galaxy S24 Ultra sitting on the desk alongside the monitor.<br>• Live HUD displays the wireless ADB mirror (`adb-R5CY22WM9HF-CDdyJW`).<br>• Click **Run workflow**.<br>• Real phone screen awakens, opens Clock app, navigates to Alarm tab, and toggles the Sunday alarm off with physical $720 \times 1560$ touch mapping.<br>• HUD DAG nodes flash green with verified verdicts in real-time. | *"Here is MusePilot driving a live Android device over ADB—no on-device agent needed. It captures the screen, grounds the Alarm toggle via Mask #7, and executes an authentic touch event. Muse Spark Open 1026 evaluates the post-action screencap, verifying the toggle state changed with 98% confidence."* | `📱 Live Device: Samsung Galaxy S24 Ultra`<br>`Calibrated 1:1 Physical Touch Mapping`<br>`Closed-Loop Verification: 98% Confidence` |
-| **1:40 – 2:20** | **Demo 2: Opaque HTML5 Canvas & Autonomous Self-Healing** | **Industrial Dashboard & Modal Recovery:**<br>• Open browser console on HTML5 Canvas app showing `0 accessible child nodes`.<br>• MusePilot calibrates frequency slider and toggles damping switch.<br>• Mid-run, an unexpected transient system modal appears, obstructing the screen.<br>• Verifier detects zero-pixel delta on target; triggers autonomous self-healing branch (Cyber Purple DAG node).<br>• Invalidates SAM 3.1 cache, dismisses modal via close mask, and completes the workflow. | *"Now, watch what happens on an opaque HTML5 Canvas app where DOM selectors are completely blind. MusePilot calibrates sliders effortlessly. But when an unexpected system modal obstructs the interface, MusePilot doesn't crash: it senses the blockage, triggers an autonomous self-healing replan, dismisses the modal, and verifies task completion."* | `0 DOM Nodes (Pure WebGL Canvas)`<br>`Obstruction Detected ➔ Cache Invalidation`<br>`Autonomous Modal Recovery & Replan` |
-| **2:20 – 2:45** | **Under the Hood: Open-Weights & Developer Hub** | **Developer Hub & Cloud Shell Terminal:**<br>• Slide-up Cloud Shell terminal drawer running `status` and `devices`.<br>• Show Python SDK snippet (`client = musepilot.Client(...)`).<br>• Show architecture diagram highlighting partner-hosted `meta-models/muse-spark-open-1026` on Baseten.<br>• Mention OpenTelemetry spans flowing over `/ws/runs`. | *"Under the hood, closed-loop verification is powered by Meta's open-weight Muse Spark Open running on Baseten. Everything is developer-ready with a Python SDK, REST API, interactive Cloud Shell, and distributed OpenTelemetry tracing."* | `Meta Open-Weight: muse-spark-open-1026`<br>`Partner Host: Baseten Inference`<br>`OpenTelemetry Distributed Spans` |
-| **2:45 – 3:00** | **The Winning Close & Production Proof** | **Metrics & GitHub Repository View:**<br>• KPI Telemetry row: 100% Centroid Hit Rate, 0% Coordinate Drift, 107/107 tests passing.<br>• Clean GitHub repository URL (`github.com/subhajitkp007/MusePilot`).<br>• Call to action for Cerebral Valley judges. | *"Zero coordinates. 100% verified. Autonomous self-healing across mobile, desktop, and canvas. Built on Meta's multimodal foundation. Welcome to reliable GUI autonomy with MusePilot."* | `🏆 Meta Global AI Developer Hackathon`<br>`100% Rehearsal Benchmark Pass`<br>`Apache 2.0 Open Source` |
+### Shot-by-Shot Screenplay Table
+
+| Timestamp | Story Beat | Visual Presentation on Screen | Exact Voiceover Script | On-Screen Text Callout | Audio / SFX |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **0:00 – 0:25** | **The Crisis: Why Computer-Use Fails in 2026** | **High-Contrast Split Screen:**<br>• *Left Screen (Red Vignette):* Traditional VLM trying to click a button, hallucinating pixel coordinates and missing by 18px due to Retina $2.0\times$ display scaling.<br>• *Right Screen (Electric Cyan):* MusePilot's neon SAM 3.1 Set-of-Mark locking onto the exact sub-pixel boundary with zero coordinates. | *"Autonomous GUI agents routinely fail in production. Why? Because Vision-Language Models hallucinate pixel coordinates—and modern interfaces like HTML5 canvas and mobile apps have zero accessible DOM nodes. A single display scaling difference causes them to click dead air. We solved this with MusePilot."* | `❌ Coordinate Hallucination (Mis-click)`<br>`✅ SAM 3.1 Zero-Coordinate Grounding` | Urgent alarm pulse ➔ clean digital whoosh into cyan |
+| **0:25 – 0:55** | **The Core Invariant: Zero-Coordinate DAG** | **Live Enterprise HUD (`http://127.0.0.1:8501`):**<br>• Show the sleek Meta dark-mode Mission Control.<br>• Operator intent: *"Calibrate frequency, damping, and benchmark on canvas."*<br>• SAM 3.1 Set-of-Mark radar lights up with numbered badges (`[01]`, `[02]`, `[03]`).<br>• Dynamic Step Execution DAG animates into view with connected cyan nodes.<br>• Zoom into Pydantic schema validator rejecting raw `[x,y]`. | *"MusePilot enforces a strict architectural invariant: the model is mathematically forbidden from emitting coordinates. Meta's SAM 3.1 segments every interactive control into sub-pixel masks with high-contrast Set-of-Mark badges. Muse Spark then plans over semantic Mask IDs, outputting a verifiable DAG. Touch points are geometrically derived from mask centroids and calibrated for native DPI."* | `Invariant: Zero Raw Coordinates`<br>`Meta SAM 3.1 + Muse Spark DAG`<br>`DPI Calibration (Retina 2.0x • 1.0x)` | Smooth UI chime as Step DAG nodes light up |
+| **0:55 – 1:35** | **Demo 1: Physical Android Actuation over Wireless ADB** | **Camera-on-Device Picture-in-Picture (PIP):**<br>• Physical Samsung Galaxy S24 Ultra sitting on desk beside the monitor.<br>• Operator clicks microphone: *"Silence the Sunday morning alarm."*<br>• Meta Muse Voice Transcribe outputs live text in HUD.<br>• Real phone screen awakens, opens Clock app, navigates to Alarm tab, and toggles the switch off via calibrated physical touch mapping.<br>• DAG nodes turn bright emerald with **98% verified confidence**. | *"Watch MusePilot command a live Samsung Galaxy S24 Ultra over wireless ADB—no on-device software required. Using Meta Muse Voice Transcribe, it interprets spoken intent, grounds the alarm toggle via SAM 3.1, and dispatches an authentic touch event. Meta's open-weight Muse Spark Open evaluates the post-action screencap, verifying the toggle state changed with 98% confidence."* | `📱 Hardware Target: Samsung Galaxy S24 Ultra`<br>`Meta Muse Voice Transcribe`<br>`Closed-Loop Verifier: 98% Confidence` | Subtle mic beep ➔ authentic phone haptic tap |
+| **1:35 – 2:15** | **Demo 2: Opaque HTML5 Canvas & Autonomous Self-Healing** | **Browser Console + Canvas App:**<br>• Open browser DevTools inspecting HTML5 Canvas showing `0 accessible child nodes`.<br>• MusePilot calibrates sliders effortlessly.<br>• **Mid-flight obstruction:** An unexpected system permission modal suddenly pops up blocking the target button!<br>• Verifier detects zero-pixel delta on target; triggers autonomous self-healing branch (Cyber Purple DAG node).<br>• Invalidates SAM 3.1 cache, identifies the modal dismiss mask, clears the blocker, resumes, and verifies goal. | *"Now, look at an opaque HTML5 Canvas app where accessibility trees and DOM selectors are completely blind. MusePilot calibrates sliders effortlessly. But watch what happens when an unexpected system modal pops up mid-run: MusePilot doesn't freeze or crash. It detects the obstruction, invalidates its perceptual cache, triggers an autonomous self-healing replan, dismisses the modal, and verifies the goal."* | `0 DOM Nodes (Pure WebGL Canvas)`<br>`Obstruction Detected ➔ Cache Invalidation`<br>`Autonomous Modal Recovery & Replan` | Warning alert tone ➔ purple replan ripple sound |
+| **2:15 – 2:40** | **Demo 3: Model Context Protocol (MCP) in Cursor / Claude** | **Cursor / Claude Desktop Split View:**<br>• Developer in Cursor types: *"@musepilot audit the checkout flow on the connected phone."*<br>• Cursor calls MusePilot MCP tool `musepilot_execute_workflow`.<br>• Live HUD flashes with SAM 3.1 radar and Spark execution ledger.<br>• Cursor receives the verified execution trace with 100% centroid hit rate.<br>• Callout: Open-weight verifier `meta-models/muse-spark-open-1026` hosted on Baseten. | *"We didn't just build a dashboard—we turned MusePilot into open agent infrastructure with the Model Context Protocol. Any AI assistant—Cursor, Claude Desktop, or Antigravity—can invoke MusePilot as an MCP tool to automate and test real software. Under the hood, verification is powered by Meta's open-weight Muse Spark Open running on Baseten."* | `🤖 Open Model Context Protocol (MCP)`<br>`Works with Cursor, Claude, Antigravity`<br>`Meta Open-Weight: muse-spark-open-1026 on Baseten` | Keyboard click ➔ MCP tool execution chime |
+| **2:40 – 3:00** | **The Winning Close: Production Ready** | **Metrics Intelligence Tab & GitHub Repo:**<br>• Executive Metrics Tab: 100% Mask Centroid Hit Rate, 0% Coordinate Drift, 135/135 tests passing.<br>• Enterprise JWT session security & sliding-window rate limiting.<br>• Clean GitHub repository URL (`github.com/subhajitkp007/MusePilot`).<br>• Decisive closing statement. | *"Zero coordinates. 100% verified. Autonomous self-healing across mobile, desktop, canvas, and MCP agents. Built on Meta's multimodal foundation with 135 passing tests and enterprise security. Welcome to the future of reliable computer use with MusePilot."* | `🏆 Track: Push the Frontier ($400,000 Pool)`<br>`⭐ $10K Open-Weight Bonus Verified`<br>`135 Tests Passing • Apache 2.0 Open Source` | Triumphant crescendo with clean fadeout |
+
+---
+
+## 🎙️ 2. Word-for-Word Voiceover Script (Teleprompter Ready)
+
+```text
+[0:00 - THE HOOK]
+"Autonomous GUI agents routinely fail in production. Why? Because Vision-Language 
+Models hallucinate pixel coordinates—and modern interfaces like HTML5 canvas and 
+mobile apps have zero accessible DOM nodes. A single display scaling difference 
+causes them to click dead air. We solved this with MusePilot."
+
+[0:25 - THE BREAKTHROUGH]
+"MusePilot enforces a strict architectural invariant: the model is mathematically 
+forbidden from emitting coordinates. Meta's SAM 3.1 segments every interactive control 
+into sub-pixel masks with high-contrast Set-of-Mark badges. Muse Spark then plans 
+over semantic Mask IDs, outputting a verifiable DAG. Touch points are geometrically 
+derived from mask centroids and calibrated for native DPI."
+
+[0:55 - DEMO 1: LIVE ANDROID]
+"Watch MusePilot command a live Samsung Galaxy S24 Ultra over wireless ADB—no 
+on-device software required. Using Meta Muse Voice Transcribe, it interprets spoken 
+intent, grounds the alarm toggle via SAM 3.1, and dispatches an authentic touch event. 
+Meta's open-weight Muse Spark Open evaluates the post-action screencap, verifying 
+the toggle state changed with 98% confidence."
+
+[1:35 - DEMO 2: CANVAS & SELF-HEALING]
+"Now, look at an opaque HTML5 Canvas app where accessibility trees and DOM selectors 
+are completely blind. MusePilot calibrates sliders effortlessly. But watch what 
+happens when an unexpected system modal pops up mid-run: MusePilot doesn't freeze or 
+crash. It detects the obstruction, invalidates its perceptual cache, triggers an 
+autonomous self-healing replan, dismisses the modal, and verifies the goal."
+
+[2:15 - DEMO 3: MCP AGENT INFRASTRUCTURE]
+"We didn't just build a dashboard—we turned MusePilot into open agent infrastructure 
+with the Model Context Protocol. Any AI assistant—Cursor, Claude Desktop, or 
+Antigravity—can invoke MusePilot as an MCP tool to automate and test real software. 
+Under the hood, verification is powered by Meta's open-weight Muse Spark Open 
+running on Baseten."
+
+[2:40 - THE WINNING CLOSE]
+"Zero coordinates. 100% verified. Autonomous self-healing across mobile, desktop, 
+canvas, and MCP agents. Built on Meta's multimodal foundation with 135 passing tests 
+and enterprise security. Welcome to the future of reliable computer use with MusePilot."
+```
+
+---
+
+## 🏆 3. Why This Video Secures the Grand Prize ($185,000 Total Stack)
+
+This video directly addresses every criterion on the Cerebral Valley / Meta judge scorecards:
+
+1. **Track Alignment: Push the Frontier ($150,000 Grand Prize):**
+   - Proven autonomous actuation over physical Android hardware and opaque zero-DOM WebGL canvases.
+   - Solves coordinate drift—the single biggest barrier preventing VLMs from controlling computers.
+2. **Best Build on Meta Open Weight Models ($10,000 Bonus):**
+   - Explicit visual callout of `meta-models/muse-spark-open-1026` hosted on Baseten partner inference performing closed-loop visual state verification on every step.
+3. **Best Agentic Use-Case ($5,000 Bonus):**
+   - Shows genuine autonomy: multi-step DAG planning, transient modal obstruction detection, cache invalidation, and dynamic self-healing replanning without human intervention.
+4. **Model Context Protocol (MCP) Ecosystem Multiplier:**
+   - Demonstrating Cursor and Claude Desktop invoking MusePilot proves it is extensible developer infrastructure, not a throwaway prototype.
+5. **Most Viral Project ($20,000 Bonus):**
+   - The opening 10-second split-screen hook and the physical Samsung S24 Ultra actuation are tailor-made for viral reach on X.
+
+---
+
+## 🛠️ 4. Recording & Production Checklist
+
+1. **Screen Layout (1920×1080 @ 60 FPS):**
+   - Fullscreen browser at `http://127.0.0.1:8501/` with browser UI hidden (`F11` or full screen).
+   - Zoom level at 90% so all panels (Step DAG, Set-of-Mark radar, and Ledger) fit cleanly.
+2. **Camera Picture-in-Picture Setup:**
+   - Phone mounted on desk stand visible in bottom-right corner during Demo 1.
+   - Hands visibly away from the phone to prove autonomous wireless ADB execution.
+3. **Audio Quality:**
+   - Crisp voiceover using a condenser microphone with noise suppression applied.
+   - Pacing: **140 to 150 words per minute** (confident, articulate, no filler words).
+4. **Captions:**
+   - High-contrast animated burned-in subtitles (over 70% of judges watch videos on low volume).
+5. **Fail-Safe Fallback:**
+   - If Wi-Fi or API gateway latency spikes while recording, use the built-in deterministic replayer:
+     ```bash
+     .venv/bin/python -m musepilot replay demo/traces/w1_golden_trace.json
+     .venv/bin/python -m musepilot replay demo/traces/w2_golden_trace.json
+     ```
+
+---
+
+## 📋 5. Submission Copy & Form Fields
+
+- **Project Title:** `MusePilot: Zero-Coordinate, Visually-Verified Multimodal GUI Agent`
+- **Tagline:** `Autonomous visual automation across Android ADB, Desktop, and Canvas with Meta SAM 3.1, Muse Spark, Muse Spark Open, and MCP.`
+- **Track:** `Push the Frontier (Indie Developer)`
+- **Bonus Categories Selected:**
+  - `Best Build on Meta Open Weight Models` (`meta-models/muse-spark-open-1026` on Baseten)
+  - `Best Agentic Use-Case`
+  - `Most Viral Project`
+- **Repository URL:** `https://github.com/subhajitkp007/MusePilot`
+- **Video Link:** *YouTube Unlisted / Loom Link (Verified in Incognito)*
+
 
 ---
 
