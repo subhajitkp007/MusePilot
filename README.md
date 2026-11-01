@@ -176,19 +176,37 @@ Conventional VLM agents fail because predicting coordinate numbers from high-res
 
 ## 🎯 Enterprise & Mobile Use Cases (Production Scenarios)
 
-MusePilot is pre-packaged with verified real-world scenarios representing critical enterprise, mobile, and mission-critical workflows:
+MusePilot is pre-packaged with 5 verified real-world scenarios representing critical enterprise, mobile, industrial, and mission-critical workflows:
 
 ### Use Case 1: Autonomous Mobile Agent (Live Android Device via ADB)
-* **Problem:** Automating real mobile applications (e.g., managing device alarms, triaging notifications, configuring enterprise MDM settings) across physical screens with unpredictable popups.
-* **Solution:** MusePilot connects over ADB (`adb shell screencap` + `adb shell input tap/keyevent`), captures real-time frames, grounds UI elements with SAM 3.1, executes taps on physical pixel coordinates (e.g. Samsung Galaxy S24 Ultra $720 \times 1560$), and verifies UI transitions with Muse Spark Open.
+* **Domain:** Mobile OS Automation • Android Fleets • MDM Testing
+* **Problem:** Automating real mobile applications (e.g., managing device alarms, triaging notifications, configuring enterprise settings) across physical screens with unpredictable touch latencies and dynamic resolutions.
+* **Solution:** MusePilot connects over ADB (`adb shell screencap` + `adb shell input tap/keyevent`), captures real-time frames, grounds UI elements with SAM 3.1, executes taps on physical pixel coordinates (e.g. Samsung Galaxy S24 Ultra $720 \times 1560$ with $1:1$ pixel accuracy), and verifies UI transitions with Muse Spark Open.
+* **Business Value:** Zero on-device agent installation required; full remote control via vision and touch over standard ADB.
 
-### Use Case 2: Legacy Industrial SCADA / Canvas Systems
-* **Problem:** A critical power-grid sub-station console or water treatment dashboard runs inside an embedded HTML5 `<canvas>` or legacy X11 app with 0 DOM nodes. Traditional RPA bots fail completely.
-* **Solution:** SAM 3.1 segments pump toggles, pressure sliders, and emergency cutoff switches without needing DOM metadata. Muse Spark plans operations strictly over visual boundaries.
+### Use Case 2: Enterprise VDI & Legacy ERP Automation
+* **Domain:** SAP • Citrix Virtual Desktops • Mainframes • Inaccessible Windows Apps
+* **Problem:** Over 60% of legacy enterprise systems expose zero APIs and provide empty OS accessibility trees (`0 accessible child nodes`), completely blinding traditional RPA scripts, OCR, and XPath selectors.
+* **Solution:** MusePilot operates purely on screen pixels. SAM 3.1 segments table rows, commit buttons, and numeric input fields. Muse Spark dispatches zero-coordinate transactions and confirms audit commitments.
+* **Business Value:** Automates multi-million-dollar legacy systems with vision alone, eliminating costly API re-platforming.
 
-### Use Case 3: High-Frequency Financial Trade Confirmation with Modal Interception
-* **Problem:** During automated compliance ticket execution, an unexpected transient risk disclaimer modal appears, causing conventional automated scripts to crash or mis-click.
-* **Solution:** Muse Spark Open catches the zero-pixel delta on the target trade button, identifies the modal obstruction, triggers autonomous self-healing, dismisses the modal, and safely verifies the order execution.
+### Use Case 3: Canvas, CAD & Creative Tools (Pure WebGL / HTML5)
+* **Domain:** Figma • Unity Engine • Blender • Industrial SCADA / GIS Dashboards
+* **Problem:** Modern engineering and design tools render directly to an opaque HTML5 `<canvas>` or WebGL context. Coordinate-based VLMs hallucinate $[x, y]$ clicks and fail on slider calibrations.
+* **Solution:** SAM 3.1 generates sub-pixel masks for frequency sliders, damping toggles, and parameter inputs. Muse Spark Open verifies signal and visual state transitions in closed loop.
+* **Business Value:** Unlocks automated end-to-end regression testing and workflow execution for graphics-intensive web software.
+
+### Use Case 4: Incident Triage & Autonomous Self-Healing (SecOps)
+* **Domain:** Cross-App SecOps • DevOps Incident Response • Site Reliability Engineering
+* **Problem:** During automated compliance ticket execution or emergency server alert triage, unexpected modal dialogs (system warnings, permission popups, network timeouts) appear, causing traditional automation to crash or mis-click.
+* **Solution:** When an unexpected dialog obstructs execution, the closed-loop verifier (Muse Spark Open `1026`) detects the zero-pixel delta on the target, diagnoses the obstruction, triggers an autonomous self-healing branch, dismisses the modal, and resumes execution.
+* **Business Value:** Eliminates fragile brittle automation failures with true resilient agent self-recovery.
+
+### Use Case 5: Hands-Free Voice Access & Assistive Operation
+* **Domain:** Sterile Medical Operating Rooms • Warehouses • Motor-Assistive Workstations
+* **Problem:** Operators in sterile environments, chemical laboratories, or forklift operators cannot use keyboards or touchscreens, yet need to execute multi-step software tasks.
+* **Solution:** Muse Voice Transcribe (`meta-models/muse-voice-transcribe`) ingests real-time spoken operator instructions, extracts the structured mission intent, and triggers autonomous cross-application visual execution.
+* **Business Value:** Complete hands-free, high-precision computer interaction for gloved, sterile, or accessibility-first environments.
 
 ---
 
