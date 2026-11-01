@@ -137,10 +137,11 @@ def test_rate_limit_exempts_health_endpoint():
     app = create_app(settings=settings)
     client = TestClient(app)
 
-    # Consecutive requests to /api/health should never 429
-    for _ in range(5):
-        resp = client.get("/api/health")
-        assert resp.status_code == 200
+    # Consecutive requests to /api/health and /health should never 429
+    for path in ("/api/health", "/api/health/", "/health", "/health/"):
+        for _ in range(3):
+            resp = client.get(path)
+            assert resp.status_code == 200
 
 
 def test_jwt_auth_via_secret_in_app():

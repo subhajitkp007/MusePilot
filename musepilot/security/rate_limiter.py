@@ -132,19 +132,23 @@ class RateLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
-        path = scope.get("path", "")
+        raw_path = scope.get("path", "")
+        normalized_path = raw_path.rstrip("/")
         method = scope.get("method", "GET").upper()
 
-        # Exempt health check, internal flutter/streamlit probes, and static assets
+        # Explicitly exempt health check endpoints (/api/health, /health) from all rate limits
+        # ensuring infrastructure probes, container orchestrators, and HUD heartbeats are never throttled.
         if (
-            path == "/api/health"
-            or path == "/"
-            or path.startswith("/_stcore")
-            or path.startswith("/assets")
-            or not path.startswith("/api/")
+            normalized_path in ("/api/health", "/health")
+            or normalized_path == ""
+            or normalized_path.startswith("/_stcore")
+            or normalized_path.startswith("/assets")
+            or not normalized_path.startswith("/api/")
         ):
             await self.app(scope, receive, send)
             return
+
+        path = raw_path
 
         # Determine rate limit tier
         ip = self._get_client_ip(scope)

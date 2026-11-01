@@ -1150,6 +1150,9 @@ def create_app(settings: Any | None = None) -> Starlette:
     routes: list[Route | WebSocketRoute | Mount] = [
         Route("/api/auth/token", get_auth_token),
         Route("/api/health", get_health),
+        Route("/api/health/", get_health),
+        Route("/health", get_health),
+        Route("/health/", get_health),
         Route("/api/config", get_config),
         Route("/api/workflows", list_workflows),
         Route("/api/runs", create_run, methods=["POST"]),
