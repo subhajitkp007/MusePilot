@@ -8,7 +8,7 @@
 [![Track](https://img.shields.io/badge/Track-Push%20the%20Frontier-orange)](https://cerebralvalley.ai/e/meta-ai-developer-hackathon)
 [![Open%20Weight](https://img.shields.io/badge/Verifier-muse--spark--open--1026-purple)](https://dev.meta.ai/models/muse-spark-open)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-107%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-124%20passed-brightgreen)](tests/)
 [![Architecture](https://img.shields.io/badge/Invariant-Zero--Coordinate-00E5FF)](docs/ARCHITECTURE.md)
 
 ---
@@ -296,7 +296,7 @@ cp .env.example .env
 # 3. Verify pre-flight system health & Meta model credentials
 make health
 
-# 4. Run automated test suites (107 unit, regression, & invariant tests)
+# 4. Run automated test suites (124 unit, regression, & invariant tests)
 make test
 
 # 5. Launch the backend API & live WebSocket runner
@@ -304,6 +304,86 @@ make server
 ```
 
 Open your browser to **`http://127.0.0.1:8501`** directly to access the compiled production web dashboard!
+
+---
+
+### 🔐 Environment Configuration (`.env`) & JWT Setup
+
+MusePilot loads all operational secrets and runtime settings through `.env` (layered on top of `configs/default_config.yaml`). Copy the provided template to get started:
+
+```bash
+cp .env.example .env
+```
+
+#### Configuration Sections Breakdown
+
+| Variable | Default | Purpose / Required Format |
+| :--- | :--- | :--- |
+| **`MUSEPILOT_META_API_KEY`** | *Required* | Meta AI API credential powering SAM 3.1, Muse Spark, and Voice Transcribe. |
+| **`MUSEPILOT_META_API_BASE_URL`** | `https://api.meta.ai/v1` | Meta AI inference gateway URL. |
+| **`MUSEPILOT_SAM_MODEL_ID`** | `sam-3.1` | Visual grounding segmentation model ID. |
+| **`MUSEPILOT_PLANNER_MODEL_ID`** | `muse-spark-1.3` | Multimodal planner model ID. |
+| **`MUSEPILOT_VOICE_MODEL_ID`** | `muse-voice-transcribe-1.0` | Spoken audio transcription model ID. |
+| **`MUSEPILOT_VERIFIER_BACKEND`** | `meta` | `partner` (open-weight verifier on Baseten/Modal/Fireworks) or `meta` (direct Meta API). |
+| **`MUSEPILOT_VERIFIER_MODEL_ID`** | `meta-models/muse-spark-open-1026` | Official Meta open-weight verifier model (**$10K Bonus**). |
+| **`MUSEPILOT_PARTNER_PROVIDER`** | `baseten` | Partner inference host (`baseten`, `modal`, or `fireworks`). |
+| **`MUSEPILOT_PARTNER_API_KEY`** | `""` | API key from your partner inference provider. |
+| **`MUSEPILOT_EXECUTION_MODE`** | `simulated` | `simulated` (reproducible deterministic canvas) or `live` (real OS & device driver). |
+| **`MUSEPILOT_ALLOW_LIVE_INPUT`** | `false` | Explicit opt-in gate required to dispatch real mouse/keyboard/touch events to the OS. |
+| **`MUSEPILOT_DISPLAY_DPI_SCALE`** | `2.0` | Display pixel ratio calibration (`2.0` for Retina displays, `1.0` for 1080p). |
+| **`MUSEPILOT_ADB_SERIAL`** | `""` | Preferred Android ADB device serial (blank selects first attached device). |
+| **`MUSEPILOT_SERVER_HOST`** | `127.0.0.1` | HUD API bind address. |
+| **`MUSEPILOT_SERVER_PORT`** | `8501` | HUD API bind port. |
+| **`MUSEPILOT_RATE_LIMIT_ENABLED`** | `true` | Enable Meta-standard sliding window rate limiting. |
+| **`MUSEPILOT_RATE_LIMIT_READ_PER_MINUTE`** | `120` | Maximum read requests per minute per client IP. |
+| **`MUSEPILOT_RATE_LIMIT_MUTATION_PER_MINUTE`** | `30` | Maximum compute execution requests per minute per client IP. |
+| **`MUSEPILOT_JWT_SECRET`** | `""` | HMAC-SHA256 secret key for signing & verifying JWTs. |
+| **`MUSEPILOT_JWT_TOKEN`** | `""` | Static pre-generated JWT token accepted directly from `.env`. |
+| **`MUSEPILOT_ALLOWED_ORIGINS`** | `http://localhost:8501,...` | CORS origin whitelist (comma-separated or JSON list). |
+
+#### Generating a Production JWT Token via CLI
+
+Generate a secure RFC 7519 `HS256` token with custom expiration and claims using the built-in CLI tool:
+
+```bash
+# Generate a token valid for 24 hours:
+.venv/bin/python -m musepilot jwt-token --subject operator --hours 24
+
+# Or specify a custom HMAC secret:
+.venv/bin/python -m musepilot jwt-token --subject admin --hours 8760 --secret "my-custom-256-bit-secret"
+```
+
+The CLI outputs the generated token and the exact lines to add to your `.env`:
+
+```bash
+# Append to your .env:
+MUSEPILOT_JWT_SECRET=my-custom-256-bit-secret
+MUSEPILOT_JWT_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### How the Frontend HUD Calls APIs Without Knowing the JWT
+
+The frontend Web HUD (running in the operator's browser) **does not need to know, hardcode, or store any JWT**:
+
+1. **Automatic `HttpOnly` Session Cookie:** When an operator loads `http://127.0.0.1:8501/`, the backend automatically issues a secure `musepilot_jwt` cookie:
+   ```http
+   Set-Cookie: musepilot_jwt=<signed_token>; Path=/; SameSite=Lax; HttpOnly
+   ```
+2. **Native Browser Dispatch:** Every subsequent API request (`GET /api/traces`, `POST /api/runs`, etc.) and WebSocket stream (`ws://127.0.0.1:8501/ws/runs`) automatically includes this cookie.
+3. **Security Architecture:**
+   - **XSS Resistant:** JavaScript cannot access `HttpOnly` cookies.
+   - **CSRF Protected:** `SameSite=Lax` prevents unauthorized cross-origin requests.
+   - **CORS Whitelisted:** Only approved origins (`localhost:8501`, `127.0.0.1:8501`) can make requests.
+4. **External Callers & SDKs:** Non-browser clients (Python SDK, CLI, cURL) simply pass the token in the standard HTTP header:
+   ```bash
+   curl -X POST http://127.0.0.1:8501/api/runs \
+     -H "Authorization: Bearer <your-jwt-token>" \
+     -H "Content-Type: application/json" \
+     -d '{"workflow_id": "w1"}'
+   ```
+5. **Auto-Handshake Endpoint:** If any third-party frontend or microservice needs to fetch a token programmatically, it can call `GET /api/auth/token` on loopback to receive `{"token": "<jwt>", "token_type": "Bearer"}`.
+
+---
 
 ### Guaranteed Deterministic Rehearsal (Zero-Risk Live Judging)
 
