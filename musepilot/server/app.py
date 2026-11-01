@@ -36,8 +36,9 @@ from musepilot.contracts.schemas import (
 from musepilot.eval.benchmark import BenchmarkEngine
 from musepilot.execution.device import get_device_driver
 from musepilot.health.checker import run_health_check
-from musepilot.orchestrator import MusePilotOrchestrator
+from musepilot.orchestrator import GLOBAL_RECORD_BUFFER, MusePilotOrchestrator
 from musepilot.perception import (
+    GLOBAL_FRAME_BUFFER,
     SAM31PerceptionClient,
     ScreenCaptureEngine,
     SetOfMarkRenderer,
@@ -140,6 +141,7 @@ async def api_index(_request: Request) -> JSONResponse:
                 "GET /api/states",
                 "GET /api/frames/raw",
                 "GET /api/frames/som",
+                "GET /api/frames/live",
                 "GET /api/benchmark",
                 "GET /api/openapi.json",
             ],
@@ -631,6 +633,25 @@ async def get_som_frame(request: Request) -> Response | JSONResponse:
     return _png_response(overlay)
 
 
+async def get_live_frame(request: Request) -> Response | JSONResponse:
+    """Capture and return the current live screen frame from the target device as PNG."""
+    driver_name = request.query_params.get("driver", "simulated").lower()
+    serial = request.query_params.get("serial")
+    if driver_name not in ("simulated", "desktop", "adb"):
+        return _error("Unknown driver; expected 'simulated', 'desktop', or 'adb'.", 400)
+    try:
+        driver = get_device_driver(driver_name, serial=serial)  # type: ignore[arg-type]
+        if driver is not None:
+            frame = await run_in_threadpool(driver.capture_frame, "live_preview")
+        else:
+            capture = ScreenCaptureEngine()
+            frame = await run_in_threadpool(capture.render_canvas_state, "w1", "initial")
+        return _png_response(frame.image)
+    except Exception as exc:
+        logger.warning(f"Live frame capture failed: {exc}")
+        return _error(f"Live capture failed: {exc}", 502)
+
+
 async def get_benchmark(_request: Request) -> JSONResponse:
     """Evaluate historical traces and return the benchmark report."""
     report = await run_in_threadpool(BenchmarkEngine().evaluate_traces)
@@ -664,13 +685,38 @@ async def stream_run_spans(websocket: WebSocket) -> None:
     async with lock:
         await websocket.send_json({"type": "started", "workflow_id": run_request.workflow_id})
         sent_span_ids: set[str] = set()
+        last_frame_seq: int = GLOBAL_FRAME_BUFFER.seq
+        sent_record_count: int = 0
+        sent_event_count: int = 0
         loop = asyncio.get_running_loop()
         future = loop.run_in_executor(None, _execute_run_blocking, run_request)
         try:
             while not future.done():
                 await _drain_spans(websocket, sent_span_ids)
+                if GLOBAL_FRAME_BUFFER.seq > last_frame_seq:
+                    last_frame_seq = GLOBAL_FRAME_BUFFER.seq
+                    if GLOBAL_FRAME_BUFFER.latest_event is not None:
+                        await websocket.send_json(GLOBAL_FRAME_BUFFER.latest_event)
+                while sent_event_count < len(GLOBAL_RECORD_BUFFER.events):
+                    evt = GLOBAL_RECORD_BUFFER.events[sent_event_count]
+                    sent_event_count += 1
+                    await websocket.send_json(evt)
+                while sent_record_count < len(GLOBAL_RECORD_BUFFER.records):
+                    rec = GLOBAL_RECORD_BUFFER.records[sent_record_count]
+                    sent_record_count += 1
+                    await websocket.send_json({"type": "step_record", "record": rec})
                 await asyncio.sleep(0.05)
             await _drain_spans(websocket, sent_span_ids)
+            if GLOBAL_FRAME_BUFFER.seq > last_frame_seq and GLOBAL_FRAME_BUFFER.latest_event is not None:
+                await websocket.send_json(GLOBAL_FRAME_BUFFER.latest_event)
+            while sent_event_count < len(GLOBAL_RECORD_BUFFER.events):
+                evt = GLOBAL_RECORD_BUFFER.events[sent_event_count]
+                sent_event_count += 1
+                await websocket.send_json(evt)
+            while sent_record_count < len(GLOBAL_RECORD_BUFFER.records):
+                rec = GLOBAL_RECORD_BUFFER.records[sent_record_count]
+                sent_record_count += 1
+                await websocket.send_json({"type": "step_record", "record": rec})
             trace = future.result()
         except WebSocketDisconnect:
             future.cancel()
@@ -711,6 +757,7 @@ def create_app() -> Starlette:
         Route("/api/states", get_states),
         Route("/api/frames/raw", get_raw_frame),
         Route("/api/frames/som", get_som_frame),
+        Route("/api/frames/live", get_live_frame),
         Route("/api/benchmark", get_benchmark),
         Route("/api/openapi.json", get_openapi),
         WebSocketRoute("/ws/runs", stream_run_spans),

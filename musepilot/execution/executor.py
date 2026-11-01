@@ -95,6 +95,7 @@ class ActionExecutor:
                 self._dispatch_to_device(
                     device_driver, step.operation, logical_point, drag_destination, step.input_value
                 )
+                time.sleep(0.8)  # Let target OS touch animation and window transition settle
                 post_frame = device_driver.capture_frame(state_label=next_state_label)
             else:
                 # Render or capture the post-action visual state

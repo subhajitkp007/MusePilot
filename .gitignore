@@ -14,8 +14,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -230,3 +230,4 @@ Meta_Global_AI_devloper_hackathon_details.md
 *.mht
 logs/
 traces/
+.DS_Store

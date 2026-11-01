@@ -40,9 +40,7 @@ void main() {
   });
 
   test('createRun posts the run request and parses the trace', () async {
-    final golden = File(
-      'test/fixtures/golden_w1.json',
-    ).readAsStringSync();
+    final golden = File('test/fixtures/golden_w1.json').readAsStringSync();
     final client = MusePilotApi(
       baseUrl: 'http://test',
       client: MockClient((request) async {
@@ -54,10 +52,7 @@ void main() {
       }),
     );
 
-    final trace = await client.createRun(
-      workflowId: 'w1',
-      injectModal: false,
-    );
+    final trace = await client.createRun(workflowId: 'w1', injectModal: false);
     expect(trace.workflowId, 'w1');
     expect(trace.records, hasLength(4));
     client.close();
@@ -67,10 +62,8 @@ void main() {
     final client = MusePilotApi(
       baseUrl: 'http://test',
       client: MockClient(
-        (_) async => http.Response(
-          jsonEncode({'detail': 'Unknown workflow.'}),
-          400,
-        ),
+        (_) async =>
+            http.Response(jsonEncode({'detail': 'Unknown workflow.'}), 400),
       ),
     );
 

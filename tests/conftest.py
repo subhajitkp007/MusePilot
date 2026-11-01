@@ -14,6 +14,8 @@ _ISOLATED_ROOT = Path(tempfile.mkdtemp(prefix="musepilot_test_"))
 # This keeps the suite hermetic (no live API calls) and keeps run artifacts
 # out of the repository's traces/, logs/, and demo/golden_traces/ directories.
 os.environ["MUSEPILOT_EXECUTION_MODE"] = "simulated"
+os.environ["MUSEPILOT_ALLOW_LIVE_INPUT"] = "false"
+os.environ["MUSEPILOT_VERIFIER_BACKEND"] = "partner"
 os.environ["MUSEPILOT_META_API_KEY"] = ""
 os.environ["MUSEPILOT_PARTNER_API_KEY"] = ""
 os.environ["MUSEPILOT_DISPLAY_DPI_SCALE"] = "2.0"

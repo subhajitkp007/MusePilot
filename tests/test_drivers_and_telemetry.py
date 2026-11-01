@@ -151,10 +151,10 @@ def test_otlp_export_fails_soft_without_collector() -> None:
 
 
 def test_adb_driver_availability_probe(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Prove availability follows the adb binary on PATH."""
-    monkeypatch.setattr("shutil.which", lambda _name: None)
+    """Prove availability follows the adb binary discovery."""
+    monkeypatch.setattr("musepilot.execution.device._find_adb", lambda: None)
     assert AdbDeviceDriver.is_available() is False
-    monkeypatch.setattr("shutil.which", lambda _name: "/usr/bin/adb")
+    monkeypatch.setattr("musepilot.execution.device._find_adb", lambda: "/usr/bin/adb")
     assert AdbDeviceDriver.is_available() is True
 
 

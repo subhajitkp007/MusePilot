@@ -153,6 +153,14 @@ def test_som_frame_returns_png() -> None:
     assert response.content[:8] == b"\x89PNG\r\n\x1a\n"
 
 
+def test_live_frame_returns_png() -> None:
+    """Live frame preview returns a valid PNG image."""
+    response = client.get("/api/frames/live?driver=simulated")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.content[:8] == b"\x89PNG\r\n\x1a\n"
+
+
 def test_frames_reject_bad_params() -> None:
     """Frame endpoints validate workflow and state inputs."""
     assert client.get("/api/frames/raw?workflow=w9").status_code == 400
@@ -184,6 +192,8 @@ def test_websocket_streams_spans_then_completes() -> None:
     assert messages[-1]["type"] == "complete"
     assert messages[-1]["trace"]["status"] == "COMPLETED"
     assert any(m["type"] == "span" for m in messages)
+    assert any(m["type"] == "frame" for m in messages)
+    assert any(m["type"] == "step_record" for m in messages)
 
 
 def test_websocket_rejects_invalid_request() -> None:

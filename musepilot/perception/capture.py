@@ -4,9 +4,11 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import io
 from dataclasses import dataclass
+from typing import Any
 
 from PIL import Image, ImageDraw
 
@@ -35,6 +37,39 @@ def compute_image_hash(image: Image.Image) -> str:
     """Compute a deterministic SHA-256 hex digest over raw RGB frame bytes."""
     rgb = image.convert("RGB")
     return hashlib.sha256(rgb.tobytes()).hexdigest()[:16]
+
+
+def frame_to_base64_jpeg(image: Image.Image, max_dim: int = 1080) -> str:
+    """Encode an image as a compact base64 JPEG string for real-time WebSocket streaming."""
+    img = image.copy()
+    w, h = img.size
+    longest = max(w, h)
+    if longest > max_dim:
+        scale = max_dim / longest
+        img = img.resize((max(1, int(w * scale)), max(1, int(h * scale))))
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, format="JPEG", quality=75)
+    return base64.b64encode(buf.getvalue()).decode("ascii")
+
+
+class LiveFrameBuffer:
+    """Thread-safe global buffer holding the latest live execution frame."""
+
+    def __init__(self) -> None:
+        self.latest_event: dict[str, Any] | None = None
+        self.seq: int = 0
+
+    def publish(self, image: Image.Image, state_label: str) -> None:
+        """Publish a new frame event to live stream subscribers."""
+        self.latest_event = {
+            "type": "frame",
+            "image_base64": frame_to_base64_jpeg(image),
+            "state_label": state_label,
+        }
+        self.seq += 1
+
+
+GLOBAL_FRAME_BUFFER = LiveFrameBuffer()
 
 
 class ScreenCaptureEngine:

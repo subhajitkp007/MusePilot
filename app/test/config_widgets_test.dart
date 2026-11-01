@@ -46,10 +46,7 @@ void main() {
       const MaterialApp(
         home: Scaffold(
           body: Column(
-            children: [
-              StatusChip.pass('PASS'),
-              StatusChip.fail('FAIL'),
-            ],
+            children: [StatusChip.pass('PASS'), StatusChip.fail('FAIL')],
           ),
         ),
       ),

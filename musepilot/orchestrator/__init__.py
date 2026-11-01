@@ -4,6 +4,9 @@
 
 from __future__ import annotations
 
-from musepilot.orchestrator.agent_loop import MusePilotOrchestrator
+from musepilot.orchestrator.agent_loop import (
+    GLOBAL_RECORD_BUFFER,
+    MusePilotOrchestrator,
+)
 
-__all__ = ["MusePilotOrchestrator"]
+__all__ = ["GLOBAL_RECORD_BUFFER", "MusePilotOrchestrator"]

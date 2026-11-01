@@ -7,6 +7,7 @@ from __future__ import annotations
 import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from musepilot.config import get_settings
 from musepilot.contracts.schemas import (
@@ -22,6 +23,7 @@ from musepilot.contracts.schemas import (
 from musepilot.execution import ActionExecutor
 from musepilot.execution.device import DeviceDriver
 from musepilot.perception import (
+    GLOBAL_FRAME_BUFFER,
     CapturedFrame,
     SAM31PerceptionClient,
     ScreenCaptureEngine,
@@ -36,6 +38,37 @@ from musepilot.voice import MuseVoiceTranscribeClient
 logger = get_logger("musepilot.orchestrator")
 
 
+class LiveRecordBuffer:
+    """Thread-safe global buffer of live step execution records and plan graph events."""
+
+    def __init__(self) -> None:
+        self.records: list[dict[str, Any]] = []
+        self.events: list[dict[str, Any]] = []
+
+    def reset(self) -> None:
+        self.records.clear()
+        self.events.clear()
+
+    def publish_plan(self, plan_summary: str, steps: list[dict[str, Any]]) -> None:
+        self.events.append({
+            "type": "plan",
+            "plan_summary": plan_summary,
+            "steps": steps,
+        })
+
+    def publish_step_started(self, step_id: int) -> None:
+        self.events.append({
+            "type": "step_started",
+            "step_id": step_id,
+        })
+
+    def publish(self, record: StepExecutionRecord) -> None:
+        self.records.append(record.model_dump(mode="json"))
+
+
+GLOBAL_RECORD_BUFFER = LiveRecordBuffer()
+
+
 @dataclass
 class _StepOutcome:
     """Mutable per-position execution state threaded through retry and healing."""
@@ -45,6 +78,10 @@ class _StepOutcome:
     records: list[StepExecutionRecord] = field(default_factory=list)
     recoveries: int = 0
     halted: bool = False
+
+    def add_record(self, record: StepExecutionRecord) -> None:
+        self.records.append(record)
+        GLOBAL_RECORD_BUFFER.publish(record)
 
 
 class MusePilotOrchestrator:
@@ -80,6 +117,7 @@ class MusePilotOrchestrator:
         trace_id = secrets.token_hex(6)
         wf = workflow_id.lower()
         GLOBAL_TELEMETRY.reset()
+        GLOBAL_RECORD_BUFFER.reset()
 
         logger.info(
             f"Starting MusePilot workflow '{wf}' (trace_id={trace_id})",
@@ -105,6 +143,7 @@ class MusePilotOrchestrator:
             current_frame = self.capture_engine.render_canvas_state(
                 workflow_id=wf, state_label="initial"
             )
+        GLOBAL_FRAME_BUFFER.publish(current_frame.image, "initial")
         initial_mask_set = self.sam_client.segment_frame(
             frame=current_frame, workflow_id=wf, trace_id=trace_id
         )
@@ -119,6 +158,10 @@ class MusePilotOrchestrator:
             mask_set=initial_mask_set,
             som_image=som_image,
             trace_id=trace_id,
+        )
+        GLOBAL_RECORD_BUFFER.publish_plan(
+            plan_summary=dag.plan_summary,
+            steps=[s.model_dump(mode="json") for s in dag.steps],
         )
 
         # 4. Step Execution + Closed-Loop Verification + Self-Healing
@@ -314,6 +357,7 @@ class MusePilotOrchestrator:
         inject_modal_here: bool,
     ) -> _StepOutcome:
         """Execute one plan position with bounded retries, self-healing, and escalation."""
+        GLOBAL_RECORD_BUFFER.publish_step_started(step.step_id)
         outcome = _StepOutcome(current_frame=current_frame, active_mask_set=active_mask_set)
         max_attempts = 1 + self.settings.max_retries_per_step
         attempt = 1
@@ -337,6 +381,7 @@ class MusePilotOrchestrator:
                 trace_id=trace_id,
                 device_driver=self.device_driver,
             )
+            GLOBAL_FRAME_BUFFER.publish(post_frame.image, next_state)
 
             target_mask = masks.get_mask(step.target_mask_id)
             if target_mask is None:
@@ -350,7 +395,7 @@ class MusePilotOrchestrator:
             )
 
             if verdict.passed:
-                outcome.records.append(
+                outcome.add_record(
                     StepExecutionRecord(
                         attempt_number=attempt,
                         step=step,
@@ -388,7 +433,7 @@ class MusePilotOrchestrator:
                         "verdict": "RETRY",
                     },
                 )
-                outcome.records.append(
+                outcome.add_record(
                     StepExecutionRecord(
                         attempt_number=attempt,
                         step=step,
@@ -415,7 +460,7 @@ class MusePilotOrchestrator:
                     "verdict": "ESCALATED",
                 },
             )
-            outcome.records.append(
+            outcome.add_record(
                 StepExecutionRecord(
                     attempt_number=attempt,
                     step=step,
@@ -455,7 +500,7 @@ class MusePilotOrchestrator:
                 "verdict": "FAIL",
             },
         )
-        outcome.records.append(
+        outcome.add_record(
             StepExecutionRecord(
                 attempt_number=attempt,
                 step=step,
@@ -522,7 +567,7 @@ class MusePilotOrchestrator:
             trace_id=trace_id,
         )
         outcome.recoveries += 1
-        outcome.records.append(
+        outcome.add_record(
             StepExecutionRecord(
                 attempt_number=attempt + 1,
                 step=dismiss_step,
@@ -555,7 +600,7 @@ class MusePilotOrchestrator:
             post_frame=retry_post_frame,
             trace_id=trace_id,
         )
-        outcome.records.append(
+        outcome.add_record(
             StepExecutionRecord(
                 attempt_number=attempt + 1,
                 step=step,

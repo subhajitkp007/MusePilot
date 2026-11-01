@@ -5,11 +5,13 @@
 from __future__ import annotations
 
 import io
+import os
 import shutil
 import subprocess
 import sys
 import time
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Literal
 
 from PIL import Image, ImageGrab
@@ -74,25 +76,42 @@ class DeviceDriver(ABC):
         ...  # pragma: no cover - contract only
 
 
+def _find_adb() -> str | None:
+    """Resolve the adb executable from PATH or standard SDK locations."""
+    found = shutil.which("adb")
+    if found is not None:
+        return found
+    candidates = [
+        Path.home() / "Library/Android/sdk/platform-tools/adb",
+        Path.home() / "Android/Sdk/platform-tools/adb",
+        Path("/opt/homebrew/bin/adb"),
+        Path("/usr/local/bin/adb"),
+    ]
+    for p in candidates:
+        if p.exists() and os.access(p, os.X_OK):
+            return str(p)
+    return None
+
+
 class AdbDeviceDriver(DeviceDriver):
     """Android driver over the adb binary (screencap capture + input dispatch)."""
 
     def __init__(self, serial: str | None = None) -> None:
-        adb = shutil.which("adb")
+        adb = _find_adb()
         if adb is None:
-            raise RuntimeError("adb binary not found on PATH; install Android platform-tools.")
+            raise RuntimeError("adb binary not found on PATH or standard Android SDK directories.")
         self._adb = adb
         self._serial = serial or get_settings().adb_serial or self._first_attached()
 
     @staticmethod
     def is_available() -> bool:
-        """Return True when the adb binary exists on PATH."""
-        return shutil.which("adb") is not None
+        """Return True when the adb binary exists on PATH or standard SDK directories."""
+        return _find_adb() is not None
 
     @staticmethod
     def list_devices() -> list[str]:
         """Return serials of attached devices in 'device' state (empty when adb is missing)."""
-        adb = shutil.which("adb")
+        adb = _find_adb()
         if adb is None:
             return []
         proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
@@ -172,7 +191,7 @@ class AdbDeviceDriver(DeviceDriver):
             screen_hash=compute_image_hash(image),
             width_px=width,
             height_px=height,
-            dpi_scale=get_settings().display_dpi_scale,
+            dpi_scale=1.0,  # Physical pixels match ADB input touch coordinates 1:1
             state_label=state_label,
         )
 
@@ -285,7 +304,7 @@ class DesktopDeviceDriver(DeviceDriver):
             screen_hash=compute_image_hash(image),
             width_px=width,
             height_px=height,
-            dpi_scale=get_settings().display_dpi_scale,
+            dpi_scale=1.0,  # Physical pixels match ADB input touch coordinates 1:1
             state_label=state_label,
         )
 

@@ -4,12 +4,18 @@
 
 from __future__ import annotations
 
-from musepilot.perception.capture import CapturedFrame, ScreenCaptureEngine, compute_image_hash
+from musepilot.perception.capture import (
+    GLOBAL_FRAME_BUFFER,
+    CapturedFrame,
+    ScreenCaptureEngine,
+    compute_image_hash,
+)
 from musepilot.perception.sam_client import SAM31PerceptionClient, compute_bbox_centroid
 from musepilot.perception.som_renderer import SetOfMarkRenderer
 
 __all__ = [
     "CapturedFrame",
+    "GLOBAL_FRAME_BUFFER",
     "SAM31PerceptionClient",
     "ScreenCaptureEngine",
     "SetOfMarkRenderer",

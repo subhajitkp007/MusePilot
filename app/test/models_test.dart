@@ -12,9 +12,7 @@ import 'package:musepilot_hud/models/server.dart';
 import 'package:musepilot_hud/models/trace.dart';
 
 Map<String, dynamic> _fixture(String name) =>
-    jsonDecode(
-          File('test/fixtures/$name').readAsStringSync(),
-        )
+    jsonDecode(File('test/fixtures/$name').readAsStringSync())
         as Map<String, dynamic>;
 
 void main() {
@@ -109,10 +107,35 @@ void main() {
       'partner_provider': 'baseten',
       'display_dpi_scale': 2.0,
       'checks': {'mode_ready': true},
+      'adb_available': true,
+      'voice_model_id': 'meta-models/muse-voice-transcribe-1.0',
     });
     expect(health.passed, isTrue);
     expect(health.displayDpiScale, 2.0);
     expect(health.checks['mode_ready'], isTrue);
+    expect(health.adbAvailable, isTrue);
+    expect(health.voiceModelId, contains('muse-voice'));
+
+    final config = ServerConfig.fromJson({
+      'execution_mode': 'live',
+      'display_dpi_scale': 2.0,
+      'sam_model_id': 'meta-models/sam-3.1',
+      'planner_model_id': 'meta-models/muse-spark',
+      'verifier_model_id': 'meta-models/muse-spark-open-1026',
+      'voice_model_id': 'meta-models/muse-voice-transcribe-1.0',
+      'partner_provider': 'baseten',
+      'verifier_backend': 'meta',
+      'meta_verifier_model_id': 'meta-models/muse-spark-1.3',
+    });
+    expect(config.verifierBackend, 'meta');
+    expect(config.verifierDisplayName, 'Muse Spark verifier');
+
+    final partnerConfig = ServerConfig.fromJson({
+      'execution_mode': 'simulated',
+      'verifier_model_id': 'meta-models/muse-spark-open-1026',
+    });
+    expect(partnerConfig.verifierBackend, 'partner');
+    expect(partnerConfig.verifierDisplayName, 'Spark Open verifier');
 
     final workflow = WorkflowInfo.fromJson({
       'workflow_id': 'w1',

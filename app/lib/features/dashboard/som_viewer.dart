@@ -1,0 +1,484 @@
+// Copyright 2026 MusePilot Authors
+// Licensed under the Apache License, Version 2.0
+/// SAM 3.1 Set-of-Mark grounding viewer with layer toggles and timeline.
+library;
+
+import 'package:flutter/material.dart';
+
+import '../../../core/api_client.dart';
+import '../../../theme/meta_theme.dart';
+import '../../../widgets/section_card.dart';
+
+enum ViewerLayer { som, raw, live }
+
+/// Compares canvas frames with SAM 3.1 segmentations and the live mirror.
+class SomViewer extends StatefulWidget {
+  const SomViewer({
+    required this.api,
+    required this.workflow,
+    required this.states,
+    required this.selectedState,
+    required this.onSelectState,
+    required this.traceId,
+    this.isRunning = false,
+    this.driver = 'simulated',
+    super.key,
+  });
+
+  final MusePilotApi api;
+  final String workflow;
+  final List<String> states;
+  final String selectedState;
+  final ValueChanged<String> onSelectState;
+  final String? traceId;
+  final bool isRunning;
+  final String driver;
+
+  @override
+  State<SomViewer> createState() => _SomViewerState();
+}
+
+class _SomViewerState extends State<SomViewer> {
+  ViewerLayer _activeLayer = ViewerLayer.som;
+  int _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
+
+  String _cleanStateName(String raw) {
+    switch (raw) {
+      case 'initial':
+        return 'T0 · Initial grounding';
+      case 'step_1':
+        return 'T1 · Frequency slider (75%)';
+      case 'step_1_modal_dismissed':
+        return 'T1 · Modal dismissed (healed)';
+      case 'step_2':
+        return 'T2 · Damping circuit toggle';
+      case 'step_2_modal_blocked':
+        return 'T2 · Modal obstruction';
+      case 'step_3_final':
+        return 'T3 · Gain calibration (verified)';
+      case 'step_2_final':
+        return 'T2 · Cross-app dispatch complete';
+      default:
+        final words = raw.replaceAll('_', ' ').split(' ');
+        return words
+            .map(
+              (w) => w.isEmpty
+                  ? w
+                  : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}',
+            )
+            .join(' ');
+    }
+  }
+
+  Widget _statePill(String state) {
+    final isSelected = state == widget.selectedState;
+    final isObstructed = state.contains('modal_blocked');
+    final isHealed = state.contains('modal_dismissed');
+
+    Color pillColor;
+    if (isObstructed) {
+      pillColor = MetaTheme.coralAlert;
+    } else if (isHealed) {
+      pillColor = MetaTheme.emeraldVerified;
+    } else if (isSelected) {
+      pillColor = MetaTheme.metaBlueDark;
+    } else {
+      pillColor = MetaTheme.surfaceCardBorder;
+    }
+
+    return InkWell(
+      onTap: () => widget.onSelectState(state),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? pillColor.withValues(alpha: 0.2)
+              : MetaTheme.surfaceCardElevated,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected ? pillColor : MetaTheme.surfaceCardBorder,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isObstructed)
+              const Icon(
+                Icons.warning_amber,
+                size: 12,
+                color: MetaTheme.coralAlert,
+              )
+            else if (isHealed)
+              const Icon(
+                Icons.auto_fix_high,
+                size: 12,
+                color: MetaTheme.emeraldVerified,
+              )
+            else
+              Icon(
+                Icons.circle,
+                size: 8,
+                color: isSelected ? MetaTheme.metaBlueDark : MetaTheme.inkMuted,
+              ),
+            const SizedBox(width: 6),
+            Text(
+              _cleanStateName(state),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected
+                    ? MetaTheme.inkPrimary
+                    : MetaTheme.inkSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isObstructed = widget.selectedState.contains('modal_blocked');
+    final isHealed = widget.selectedState.contains('modal_dismissed');
+
+    final effectiveStates = widget.states.contains(widget.selectedState)
+        ? widget.states
+        : [...widget.states, widget.selectedState];
+
+    final imageUrl = _activeLayer == ViewerLayer.som
+        ? widget.api.somFrameUrl(
+            workflow: widget.workflow,
+            state: widget.selectedState,
+            traceId: widget.traceId,
+          )
+        : widget.api.rawFrameUrl(
+            workflow: widget.workflow,
+            state: widget.selectedState,
+            traceId: widget.traceId,
+          );
+
+    final liveUrl =
+        '${widget.api.liveFrameUrl(driver: widget.driver)}&k=$_liveTimestamp';
+
+    return SectionCard(
+      title: 'Visual grounding',
+      icon: Icons.radar,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_activeLayer == ViewerLayer.live)
+            IconButton(
+              icon: const Icon(
+                Icons.refresh,
+                size: 16,
+                color: MetaTheme.metaBlueDark,
+              ),
+              tooltip: 'Refresh live mirror',
+              onPressed: () {
+                setState(() {
+                  _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
+                });
+              },
+            ),
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: MetaTheme.surfaceCardElevated,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: MetaTheme.surfaceCardBorder),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _layerButton(
+                  layer: ViewerLayer.som,
+                  label: 'SAM masks',
+                  active: _activeLayer == ViewerLayer.som,
+                ),
+                _layerButton(
+                  layer: ViewerLayer.raw,
+                  label: 'Raw frame',
+                  active: _activeLayer == ViewerLayer.raw,
+                ),
+                _layerButton(
+                  layer: ViewerLayer.live,
+                  label: 'Live mirror',
+                  active: _activeLayer == ViewerLayer.live,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Self-healing recovery banner if in modal state
+          if (isObstructed)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: MetaTheme.coralAlert.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: MetaTheme.coralAlert.withValues(alpha: 0.4),
+                ),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.report_problem,
+                    size: 16,
+                    color: MetaTheme.coralAlert,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Modal obstruction: verification triggered self-healing. '
+                      'The visual cache was invalidated and the plan replanned.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: MetaTheme.coralAlert,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          if (isHealed)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: MetaTheme.emeraldVerified.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: MetaTheme.emeraldVerified.withValues(alpha: 0.4),
+                ),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.auto_fix_high,
+                    size: 16,
+                    color: MetaTheme.emeraldVerified,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Self-healing succeeded: the blocking modal was dismissed '
+                      'and execution resumed toward the original goal.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: MetaTheme.emeraldVerified,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Grounding canvas display
+          Container(
+            height: 380,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: MetaTheme.obsidianBg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: widget.isRunning || isObstructed
+                    ? MetaTheme.coralAlert
+                    : MetaTheme.surfaceCardBorder,
+                width: widget.isRunning ? 2.0 : 1.0,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              children: [
+                Center(
+                  child: (_activeLayer == ViewerLayer.live)
+                      ? Image.network(
+                          liveUrl,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                          loadingBuilder: (context, child, progress) =>
+                              progress == null
+                              ? child
+                              : const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                          errorBuilder: (context, error, stack) => Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.phone_android,
+                                  size: 36,
+                                  color: theme.disabledColor,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'No live frame for the ${widget.driver} target.',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Run on a connected target, then refresh.',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                          loadingBuilder: (context, child, progress) =>
+                              progress == null
+                              ? child
+                              : const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                          errorBuilder: (context, error, stack) => Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.broken_image_outlined,
+                                  size: 36,
+                                  color: theme.disabledColor,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text('Frame unavailable for this state.'),
+                              ],
+                            ),
+                          ),
+                        ),
+                ),
+                // Overlay telemetry tag
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_activeLayer == ViewerLayer.live) ...[
+                          const Icon(
+                            Icons.phone_android,
+                            size: 12,
+                            color: MetaTheme.metaBlueDark,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'Live mirror · ${widget.driver} · refresh to update',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ] else ...[
+                          const Icon(
+                            Icons.blur_on,
+                            size: 12,
+                            color: Colors.white70,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            _activeLayer == ViewerLayer.som
+                                ? 'Grounding · SAM 3.1 masks'
+                                : 'Frame · raw pixels',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Timeline scrubber / state badges
+          Row(
+            children: [
+              const Icon(
+                Icons.history_toggle_off,
+                size: 14,
+                color: MetaTheme.metaBlueDark,
+              ),
+              const SizedBox(width: 6),
+              Text('Execution timeline', style: theme.textTheme.labelLarge),
+              const Spacer(),
+              Text(
+                'Showing ${effectiveStates.indexOf(widget.selectedState) + 1} of ${effectiveStates.length} states',
+                style: const TextStyle(fontSize: 11, color: MetaTheme.inkMuted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: effectiveStates.map((s) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _statePill(s),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _layerButton({
+    required ViewerLayer layer,
+    required String label,
+    required bool active,
+  }) {
+    return InkWell(
+      onTap: () => setState(() => _activeLayer = layer),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? MetaTheme.metaBlue : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            color: active ? Colors.white : MetaTheme.inkSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
