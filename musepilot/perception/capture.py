@@ -288,6 +288,17 @@ class ScreenCaptureEngine:
         evm_val = "0.82% [PASS]" if completed else "4.15% [UNSTABLE]"
         draw.text((620, 602), f"CARRIER: 433.920 MHz   |   THD: {thd_val}   |   PHASE NOISE: -128 dBc/Hz   |   EVM: {evm_val}", fill=(160, 185, 220), font=font_mono)
 
+        # PPT-style laser pointer cursor indicating agent interaction inside target control
+        from musepilot.perception.som_renderer import draw_ppt_laser_pointer
+        if "step_1" in state_label:
+            draw_ppt_laser_pointer(draw, cx=420, cy=190, action_label="✦ ACTUATION: DRAG (75% TARGET)", target_detail="Centroid: (420, 190) • Frequency Synthesizer", laser_color=(255, 45, 85))
+        elif "step_2" in state_label:
+            draw_ppt_laser_pointer(draw, cx=250, cy=325, action_label="✦ ACTUATION: CLICK TOGGLE", target_detail="Centroid: (250, 325) • Nyquist Damping Enabled", laser_color=(16, 185, 129))
+        elif "step_3" in state_label:
+            draw_ppt_laser_pointer(draw, cx=320, cy=455, action_label="✦ ACTUATION: KEYSTROKE '0.942'", target_detail="Centroid: (320, 455) • 12-bit IEEE 754 Parameter", laser_color=(6, 182, 212))
+        elif "final" in state_label:
+            draw_ppt_laser_pointer(draw, cx=280, cy=600, action_label="✦ ACTUATION: BENCHMARK AUDIT", target_detail="Centroid: (280, 600) • Convergence Verified [OK]", laser_color=(16, 185, 129))
+
     def _draw_w2_canvas(self, draw: ImageDraw.ImageDraw, state_label: str) -> None:
         """Draw Workflow 2: CloudOps Observability & Self-Healing Incident Command Center."""
         font_title = _get_font(13, bold=True)
@@ -410,3 +421,14 @@ class ScreenCaptureEngine:
                 width=2,
             )
             draw.text((540, 448), "DISMISS & RESYNC SESSION", fill=(255, 255, 255), font=font_btn)
+
+        # PPT-style laser pointer cursor indicating agent interaction inside target control
+        from musepilot.perception.som_renderer import draw_ppt_laser_pointer
+        if "modal" in state_label:
+            draw_ppt_laser_pointer(draw, cx=640, cy=457, action_label="✦ AUTONOMOUS REPLAN: DISMISS", target_detail="Centroid: (640, 457) • Blocker Cleared & Resynced", laser_color=(255, 45, 85))
+        elif state_label == "initial":
+            draw_ppt_laser_pointer(draw, cx=280, cy=187, action_label="✦ ACTUATION: EXTRACT METRICS", target_detail="Centroid: (280, 187) • GPU Cluster Telemetry", laser_color=(14, 165, 233))
+        elif "step_1" in state_label or "step_2" in state_label or "recovered" in state_label:
+            draw_ppt_laser_pointer(draw, cx=360, cy=330, action_label="✦ ACTUATION: INJECT INCIDENT REPORT", target_detail="Centroid: (360, 330) • GPU-NODE-07 Latency Spike", laser_color=(52, 211, 153))
+        elif "final" in state_label:
+            draw_ppt_laser_pointer(draw, cx=280, cy=475, action_label="✦ ACTUATION: DISPATCH ESCALATION", target_detail="Centroid: (280, 475) • PagerDuty + Slack Acked", laser_color=(16, 185, 129))

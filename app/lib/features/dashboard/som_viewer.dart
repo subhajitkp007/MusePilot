@@ -481,8 +481,8 @@ class _SomViewerState extends State<SomViewer> {
                           if (isShowingLiveMirror) ...[
                             Icon(
                               widget.driver == 'adb'
-                                  ? Icons.phone_android
-                                  : Icons.desktop_mac,
+                                    ? Icons.phone_android
+                                    : Icons.desktop_mac,
                               size: 12,
                               color: MetaTheme.metaBlueDark,
                             ),
@@ -508,8 +508,12 @@ class _SomViewerState extends State<SomViewer> {
                             const SizedBox(width: 5),
                             Text(
                               _activeLayer == ViewerLayer.grounding
-                                  ? 'Grounding · SAM 3.1 masks'
-                                  : 'Device View · Clean screen',
+                                  ? (widget.driver == 'adb'
+                                      ? 'Grounding · SAM 3.1 masks'
+                                      : 'Grounding · SAM 3.1 + PPT Laser Reticle')
+                                  : (widget.driver == 'adb'
+                                      ? 'Device View · Clean screen'
+                                      : 'Device View · Laser Grounding'),
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -521,6 +525,37 @@ class _SomViewerState extends State<SomViewer> {
                       ),
                     ),
                   ),
+
+                  // PPT Laser pointer indicator (for non-Android simulation & canvas)
+                  if (widget.driver != 'adb')
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1528).withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: MetaTheme.coralAlert.withValues(alpha: 0.5)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.gps_fixed, size: 11, color: MetaTheme.coralAlert),
+                            SizedBox(width: 4),
+                            Text(
+                              'PPT LASER CENTROID ✦ ACTIVE',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: MetaTheme.coralAlert,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
