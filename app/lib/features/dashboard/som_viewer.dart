@@ -343,21 +343,25 @@ class _SomViewerState extends State<SomViewer> {
     required String label,
     required bool active,
   }) {
-    return InkWell(
-      onTap: () => setState(() => _activeLayer = layer),
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? MetaTheme.metaBlue : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            color: active ? Colors.white : MetaTheme.inkSecondary,
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: () => setState(() => _activeLayer = layer),
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: active ? MetaTheme.metaBlue : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              color: active ? Colors.white : MetaTheme.inkSecondary,
+            ),
           ),
         ),
       ),
