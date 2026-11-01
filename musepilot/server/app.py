@@ -110,7 +110,7 @@ class SecurityHeadersMiddleware:
                         b"script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline' https://www.gstatic.com; "
                         b"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
                         b"img-src 'self' data: blob: https://www.gstatic.com; "
-                        b"connect-src 'self' ws: wss: https://www.gstatic.com https://fonts.gstatic.com; "
+                        b"connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://www.gstatic.com https://fonts.gstatic.com; "
                         b"font-src 'self' data: https://fonts.gstatic.com;"
                     )
                     headers.append((b"content-security-policy", csp))
