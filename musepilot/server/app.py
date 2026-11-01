@@ -107,11 +107,11 @@ class SecurityHeadersMiddleware:
                 if b"content-security-policy" not in header_names:
                     csp = (
                         b"default-src 'self'; "
-                        b"script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline'; "
-                        b"style-src 'self' 'unsafe-inline'; "
-                        b"img-src 'self' data: blob:; "
-                        b"connect-src 'self' ws: wss:; "
-                        b"font-src 'self' data:;"
+                        b"script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline' https://www.gstatic.com; "
+                        b"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                        b"img-src 'self' data: blob: https://www.gstatic.com; "
+                        b"connect-src 'self' ws: wss: https://www.gstatic.com https://fonts.gstatic.com; "
+                        b"font-src 'self' data: https://fonts.gstatic.com;"
                     )
                     headers.append((b"content-security-policy", csp))
                 message["headers"] = headers
