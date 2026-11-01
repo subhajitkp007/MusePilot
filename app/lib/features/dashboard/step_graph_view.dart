@@ -135,18 +135,6 @@ class _StepGraphViewState extends State<StepGraphView>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.planSummary?.isNotEmpty == true) ...[
-            Text(
-              widget.planSummary!,
-              style: const TextStyle(
-                fontSize: 12,
-                color: MetaTheme.inkSecondary,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
-
           // Thin linear progress bar
           ClipRRect(
             borderRadius: BorderRadius.circular(2),
