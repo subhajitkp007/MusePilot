@@ -251,6 +251,29 @@ class MusePilotSettings(BaseSettings):
     log_dir: Path = Field(default=PROJECT_ROOT / "logs")
     golden_trace_dir: Path = Field(default=PROJECT_ROOT / "demo" / "golden_traces")
 
+    # 6. Security, Hardening & Access Control
+    allowed_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:8501",
+            "http://127.0.0.1:8501",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:8080",
+            "http://127.0.0.1:8080",
+        ],
+        description="Allowed CORS origin whitelist; defaults to local loopback ports",
+    )
+    api_token: str = Field(
+        default="",
+        description="Optional enterprise API authentication token. When non-empty, requires Bearer or X-API-Key token.",
+    )
+    max_upload_bytes: int = Field(
+        default=25 * 1024 * 1024,
+        gt=0,
+        le=100 * 1024 * 1024,
+        description="Maximum accepted request body / upload size in bytes (default: 25MB)",
+    )
+
     @classmethod
     def settings_customise_sources(
         cls,
@@ -268,6 +291,39 @@ class MusePilotSettings(BaseSettings):
             YamlConfigSettingsSource(settings_cls),
             file_secret_settings,
         )
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, value: Any) -> list[str]:
+        """Support comma-separated strings or JSON arrays for MUSEPILOT_ALLOWED_ORIGINS."""
+        if isinstance(value, str):
+            clean = value.strip()
+            if clean.startswith("["):
+                try:
+                    import json
+
+                    parsed = json.loads(clean)
+                    if isinstance(parsed, list):
+                        return [str(origin).strip() for origin in parsed if str(origin).strip()]
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    return [origin.strip() for origin in clean.split(",") if origin.strip()]
+            return [origin.strip() for origin in clean.split(",") if origin.strip()]
+        return value
+
+    @field_validator("adb_serial")
+    @classmethod
+    def validate_adb_serial_config(cls, value: str) -> str:
+        """Ensure configured adb_serial does not inject CLI flags or malicious tokens."""
+        if not value:
+            return ""
+        import re
+
+        clean = value.strip()
+        if clean.startswith("-") or not re.match(r"^[a-zA-Z0-9_.:-]+$", clean):
+            raise ValueError(
+                f"Invalid adb_serial '{value}'. Must be alphanumeric with [.:-_] and cannot start with '-'"
+            )
+        return clean
 
     @field_validator("verifier_model_id")
     @classmethod

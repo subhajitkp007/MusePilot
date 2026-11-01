@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import io
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,21 @@ from musepilot.perception.capture import CapturedFrame, compute_image_hash
 from musepilot.telemetry import get_logger
 
 logger = get_logger("musepilot.execution.device")
+
+_SERIAL_PATTERN = re.compile(r"^[a-zA-Z0-9_.:-]+$")
+_UNSAFE_SHELL_CHARS = re.compile(r"[\x00-\x1f\x7f;&|`$<>(){}\"'\\]")
+
+
+def validate_adb_serial(serial: str) -> str:
+    """Validate ADB device serial to prevent CLI option and flag injection."""
+    clean = serial.strip()
+    if not clean:
+        raise ValueError("ADB device serial cannot be empty.")
+    if clean.startswith("-"):
+        raise ValueError(f"ADB device serial cannot start with a hyphen: {clean!r}")
+    if not _SERIAL_PATTERN.match(clean):
+        raise ValueError(f"ADB device serial contains invalid characters: {clean!r}")
+    return clean
 
 
 class LiveInputDisabledError(RuntimeError):
@@ -101,7 +117,8 @@ class AdbDeviceDriver(DeviceDriver):
         if adb is None:
             raise RuntimeError("adb binary not found on PATH or standard Android SDK directories.")
         self._adb = adb
-        self._serial = serial or get_settings().adb_serial or self._first_attached()
+        target_serial = serial or get_settings().adb_serial or self._first_attached()
+        self._serial = validate_adb_serial(target_serial)
 
     @staticmethod
     def is_available() -> bool:
@@ -171,8 +188,12 @@ class AdbDeviceDriver(DeviceDriver):
         )
 
     def text(self, value: str) -> None:
-        """Type text, escaping spaces per adb input conventions."""
+        """Type text, escaping spaces per adb input conventions after sanitizing shell metacharacters."""
         require_live_input()
+        if _UNSAFE_SHELL_CHARS.search(value):
+            raise DeviceDispatchError(
+                f"Rejected unsafe text dispatch: input contains forbidden shell metacharacters ({value!r})"
+            )
         escaped = value.replace("%", "%25").replace(" ", "%s")
         self._run("shell", "input", "text", escaped)
 

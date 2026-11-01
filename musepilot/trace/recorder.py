@@ -4,7 +4,9 @@
 
 from __future__ import annotations
 
+import glob
 import json
+import re
 from pathlib import Path
 
 from musepilot.config import get_settings
@@ -12,6 +14,8 @@ from musepilot.contracts.schemas import RunTrace
 from musepilot.telemetry import get_logger, redact_dict
 
 logger = get_logger("musepilot.trace")
+
+_TRACE_ID_RE = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 
 
 class TraceStore:
@@ -56,9 +60,20 @@ class TraceStore:
         )
         return out_path
 
+    @staticmethod
+    def _is_safe_path(target: Path, base_dir: Path) -> bool:
+        """Ensure resolved path does not traverse outside the designated base directory."""
+        try:
+            return target.resolve().is_relative_to(base_dir.resolve())
+        except (ValueError, OSError):
+            return False
+
     def load_trace(self, trace_path: Path) -> RunTrace:
         """Load and schema-validate a persisted RunTrace from JSON."""
-        raw = json.loads(trace_path.read_text(encoding="utf-8"))
+        resolved = trace_path.resolve()
+        if not resolved.exists() or not resolved.is_file():
+            raise FileNotFoundError(f"Trace file not found: {trace_path}")
+        raw = json.loads(resolved.read_text(encoding="utf-8"))
         return RunTrace.model_validate(raw)
 
     def load_golden_or_latest(self, workflow_id: str) -> RunTrace | None:
@@ -68,19 +83,27 @@ class TraceStore:
             self.golden_dir / f"golden_{wf}.json",
             self.trace_dir / f"latest_{wf}.json",
         ):
-            if candidate.exists():
+            if candidate.exists() and self._is_safe_path(candidate, self.trace_dir.parent):
                 return self.load_trace(candidate)
         return None
 
     def find_trace(self, trace_id: str) -> RunTrace | None:
         """Locate a persisted trace by ID across run and golden directories."""
         wanted = trace_id.strip().lower()
+        if not _TRACE_ID_RE.match(wanted):
+            logger.warning(f"Rejected invalid trace_id lookup pattern: {trace_id!r}")
+            return None
+        safe_glob = glob.escape(wanted)
         for directory in (self.trace_dir, self.golden_dir):
-            matches = sorted(directory.glob(f"trace_*_{wanted}.json"))
-            if matches:
-                return self.load_trace(matches[0])
+            if not directory.exists():
+                continue
+            matches = sorted(directory.glob(f"trace_*_{safe_glob}.json"))
+            for match in matches:
+                if self._is_safe_path(match, directory):
+                    return self.load_trace(match)
         for golden_file in sorted(self.golden_dir.glob("golden_*.json")):
-            candidate = self.load_trace(golden_file)
-            if candidate.trace_id.lower() == wanted:
-                return candidate
+            if self._is_safe_path(golden_file, self.golden_dir):
+                candidate = self.load_trace(golden_file)
+                if candidate.trace_id.lower() == wanted:
+                    return candidate
         return None
