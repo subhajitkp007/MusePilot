@@ -163,7 +163,6 @@ class _RunPanelState extends State<RunPanel> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final voice = widget.trace?.voiceIntake;
     final trace = widget.trace;
 
     final statusChip = widget.running
@@ -565,41 +564,6 @@ class _RunPanelState extends State<RunPanel> {
                     },
                   ),
           ),
-
-          if (voice != null) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: MetaTheme.metaBlue.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: MetaTheme.metaBlue.withValues(alpha: 0.25),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.record_voice_over,
-                    size: 16,
-                    color: MetaTheme.metaBlueDark,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Transcript: "${voice.transcript}" '
-                      '(${(voice.confidence * 100).toStringAsFixed(1)}% confidence)',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: MetaTheme.inkPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
