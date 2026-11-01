@@ -187,7 +187,7 @@ class _SomViewerState extends State<SomViewer> {
 
           // Grounding canvas display
           Container(
-            height: 440,
+            height: 485,
             width: double.infinity,
             decoration: BoxDecoration(
               color: MetaTheme.obsidianBg,

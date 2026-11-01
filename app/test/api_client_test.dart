@@ -5,6 +5,7 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -87,6 +88,42 @@ void main() {
     );
 
     expect(() => client.getBenchmark(), throwsA(isA<ApiException>()));
+    client.close();
+  });
+
+  test('transcribeAudio posts multipart WAV and parses transcript', () async {
+    final client = MusePilotApi(
+      baseUrl: 'http://test',
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/voice/transcribe');
+        expect(request.method, 'POST');
+        // MockClient flattens the multipart request, so assert on the
+        // encoded body and content type instead of fields/files.
+        expect(
+          request.headers['content-type'],
+          startsWith('multipart/form-data'),
+        );
+        final body = request.body;
+        expect(body, contains('name="workflow_id"'));
+        expect(body, contains('w2'));
+        expect(body, contains('name="audio"'));
+        expect(body, contains('filename="command.wav"'));
+        return http.Response(
+          jsonEncode({
+            'model_id': 'meta-models/muse-voice-transcribe-1.0',
+            'transcript': 'Set an alarm for nine AM',
+            'confidence': 0.97,
+          }),
+          200,
+        );
+      }),
+    );
+
+    final result = await client.transcribeAudio(
+      audioBytes: Uint8List.fromList([1, 2, 3, 4]),
+    );
+    expect(result.transcript, 'Set an alarm for nine AM');
+    expect(result.confidence, 0.97);
     client.close();
   });
 

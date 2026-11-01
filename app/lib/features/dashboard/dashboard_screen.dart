@@ -25,6 +25,7 @@ import 'run_panel.dart';
 import 'solution_showcase_bar.dart';
 import 'som_viewer.dart';
 import 'step_graph_view.dart';
+import 'terminal_drawer.dart';
 
 /// Single-screen Mission Control HUD composing every dashboard section.
 class DashboardScreen extends StatefulWidget {
@@ -63,6 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   BenchmarkReport? _benchmark;
   List<TraceSummary> _history = const [];
   ServerConfig? _config;
+  bool _showTerminal = false;
 
   @override
   void initState() {
@@ -394,57 +396,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Meta Enterprise Left Navigation Rail
-          NavigationRail(
-            selectedIndex: _selectedNavIndex,
-            backgroundColor: MetaTheme.surfaceCard,
-            minWidth: 72,
-            groupAlignment: -0.9,
-            labelType: NavigationRailLabelType.all,
-            selectedLabelTextStyle: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: MetaTheme.metaBlueDark,
-            ),
-            unselectedLabelTextStyle: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: MetaTheme.inkSecondary,
-            ),
-            selectedIconTheme: const IconThemeData(
-              color: MetaTheme.metaBlueDark,
-              size: 22,
-            ),
-            unselectedIconTheme: const IconThemeData(
-              color: MetaTheme.inkSecondary,
-              size: 20,
-            ),
-            onDestinationSelected: (index) =>
-                setState(() => _selectedNavIndex = index),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
-                label: Text('Mission'),
+          Column(
+            children: [
+              Expanded(
+                child: NavigationRail(
+                  selectedIndex: _selectedNavIndex,
+                  backgroundColor: MetaTheme.surfaceCard,
+                  minWidth: 72,
+                  groupAlignment: -0.9,
+                  labelType: NavigationRailLabelType.all,
+                  selectedLabelTextStyle: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: MetaTheme.metaBlueDark,
+                  ),
+                  unselectedLabelTextStyle: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: MetaTheme.inkSecondary,
+                  ),
+                  selectedIconTheme: const IconThemeData(
+                    color: MetaTheme.metaBlueDark,
+                    size: 22,
+                  ),
+                  unselectedIconTheme: const IconThemeData(
+                    color: MetaTheme.inkSecondary,
+                    size: 20,
+                  ),
+                  onDestinationSelected: (index) =>
+                      setState(() => _selectedNavIndex = index),
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.dashboard_outlined),
+                      selectedIcon: Icon(Icons.dashboard),
+                      label: Text('Mission'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.devices_other_outlined),
+                      selectedIcon: Icon(Icons.devices_other),
+                      label: Text('Fleet'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.integration_instructions_outlined),
+                      selectedIcon: Icon(Icons.integration_instructions),
+                      label: Text('SDK Hub'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.shield_outlined),
+                      selectedIcon: Icon(Icons.shield),
+                      label: Text('Trust'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.analytics_outlined),
+                      selectedIcon: Icon(Icons.analytics),
+                      label: Text('Metrics'),
+                    ),
+                  ],
+                ),
               ),
-              NavigationRailDestination(
-                icon: Icon(Icons.devices_other_outlined),
-                selectedIcon: Icon(Icons.devices_other),
-                label: Text('Fleet'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.integration_instructions_outlined),
-                selectedIcon: Icon(Icons.integration_instructions),
-                label: Text('SDK Hub'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.shield_outlined),
-                selectedIcon: Icon(Icons.shield),
-                label: Text('Trust'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.analytics_outlined),
-                selectedIcon: Icon(Icons.analytics),
-                label: Text('Metrics'),
+
+              // Bottom Terminal & Settings Action Icons
+              Container(
+                width: 72,
+                color: MetaTheme.surfaceCard,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  children: [
+                    IconButton(
+                      tooltip: 'Cloud Shell Terminal',
+                      icon: Icon(
+                        _showTerminal ? Icons.terminal : Icons.terminal_outlined,
+                        color: _showTerminal ? MetaTheme.electricCyan : MetaTheme.inkSecondary,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _showTerminal = !_showTerminal),
+                    ),
+                    const SizedBox(height: 4),
+                    IconButton(
+                      tooltip: 'System Settings',
+                      icon: const Icon(
+                        Icons.settings_outlined,
+                        color: MetaTheme.inkSecondary,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        setState(() => _selectedNavIndex = 2); // Jump to SDK Hub & Infrastructure Gateway
+                      },
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -456,10 +496,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           // Main Content View
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                   // Integration banner: configured Meta models and drivers.
                   HackathonBanner(
                     verifierLabel: _config?.verifierDisplayName ?? 'Verifier',
@@ -553,6 +596,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 trace: _trace,
                                 baseUrl: _baseUrl,
                                 adbAvailable: _health?.adbAvailable ?? false,
+                                api: _api,
                               ),
                             ],
                           );
@@ -717,9 +761,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ),
+
+          // Slide-over Cloud Shell Terminal Drawer
+          if (_showTerminal)
+            TerminalDrawer(
+              baseUrl: _baseUrl,
+              onClose: () => setState(() => _showTerminal = false),
+            ),
         ],
       ),
-    );
+    ),
+  ],
+),
+);
   }
 
   Widget _appBarBadge({

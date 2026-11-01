@@ -10,6 +10,8 @@ class MetaTheme {
   // Brand Primaries
   static const Color metaBlue = Color(0xFF1877F2);
   static const Color metaBlueDark = Color(0xFF2D88FF);
+  static const Color electricCyan = Color(0xFF00E5FF);
+  static const Color cyberPurple = Color(0xFF9D4EDD);
 
   // Status & Verification
   static const Color emeraldVerified = Color(0xFF00E676);
