@@ -374,7 +374,9 @@ class _SomViewerState extends State<SomViewer> {
 
           // Grounding canvas display - Matched in height to Run control
           Container(
-            height: isObstructed || isHealed ? 390 : 442,
+            height: isObstructed || isHealed
+                ? 350
+                : (widget.states.length > 1 ? 398 : 442),
             width: double.infinity,
             decoration: BoxDecoration(
               color: MetaTheme.obsidianBg,
@@ -559,7 +561,134 @@ class _SomViewerState extends State<SomViewer> {
                 ],
               ),
             ),
+
+          // Stage Timeline Scrubber
+          if (widget.states.length > 1) ...[
+            const SizedBox(height: 10),
+            _buildTimelineScrubber(),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineScrubber() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: MetaTheme.surfaceCardElevated,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MetaTheme.surfaceCardBorder),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.timeline_rounded,
+            size: 14,
+            color: MetaTheme.inkSecondary,
+          ),
+          const SizedBox(width: 6),
+          const Text(
+            'STAGE:',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: MetaTheme.inkSecondary,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final state in widget.states) ...[
+                    _buildTimelineChip(state),
+                    const SizedBox(width: 6),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineChip(String state) {
+    final isSelected = widget.selectedState == state;
+    final isObstruction = state.contains('modal_blocked');
+    final isRecovery = state.contains('recovered');
+    final isFinal = state.contains('final');
+
+    String label;
+    IconData icon;
+    Color activeColor;
+
+    if (state == 'initial') {
+      label = 'T0 · Initial';
+      icon = Icons.play_circle_outline;
+      activeColor = MetaTheme.metaBlue;
+    } else if (isObstruction) {
+      label = 'T2 · ⚠️ Blocker';
+      icon = Icons.report_problem;
+      activeColor = MetaTheme.coralAlert;
+    } else if (isRecovery) {
+      label = 'T2 · ✓ Healed';
+      icon = Icons.auto_fix_high;
+      activeColor = MetaTheme.emeraldVerified;
+    } else if (isFinal) {
+      final stepMatch = RegExp(r'step_(\d+)').firstMatch(state);
+      final stepNum = stepMatch != null ? stepMatch.group(1) : '4';
+      label = 'T$stepNum · ✦ Verified';
+      icon = Icons.verified;
+      activeColor = MetaTheme.emeraldVerified;
+    } else {
+      final stepMatch = RegExp(r'step_(\d+)').firstMatch(state);
+      final stepNum = stepMatch != null ? stepMatch.group(1) : '1';
+      label = 'T$stepNum · Step $stepNum';
+      icon = Icons.adjust;
+      activeColor = MetaTheme.metaBlue;
+    }
+
+    final chipColor = isSelected ? activeColor : MetaTheme.inkSecondary;
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: () => widget.onSelectState(state),
+        borderRadius: BorderRadius.circular(6),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? activeColor.withValues(alpha: 0.18)
+                : MetaTheme.surfaceCard,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isSelected ? activeColor : MetaTheme.surfaceCardBorder,
+              width: isSelected ? 1.5 : 1.0,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: chipColor),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? Colors.white : MetaTheme.inkSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

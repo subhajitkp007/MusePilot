@@ -296,11 +296,31 @@ def _state_timeline(trace: RunTrace | None, workflow_id: str) -> list[str]:
 
 
 def _active_target(trace: RunTrace | None, state_label: str) -> int:
-    """Select the highlighted mask for a timeline state."""
+    """Select the highlighted mask for a timeline state based on active workflow step."""
     if "modal" in state_label:
         return 4
-    if trace is not None and trace.records:
-        return trace.records[-1].step.target_mask_id
+
+    # Extract step number from state_label (e.g. "step_1", "step_2", "step_3_final")
+    step_match = re.search(r"step_(\d+)", state_label)
+    if step_match:
+        step_num = int(step_match.group(1))
+        if trace is not None:
+            for rec in trace.records:
+                if rec.step.step_id == step_num:
+                    return rec.step.target_mask_id
+            for st in trace.plan.steps:
+                if st.step_id == step_num:
+                    return st.target_mask_id
+        return step_num
+
+    if "final" in state_label:
+        if trace is not None and trace.records:
+            return trace.records[-1].step.target_mask_id
+        return 4
+
+    # Initial state -> Step 1 target
+    if trace is not None and trace.plan.steps:
+        return trace.plan.steps[0].target_mask_id
     return 1
 
 
