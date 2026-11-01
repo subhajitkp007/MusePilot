@@ -51,61 +51,17 @@ class SomViewer extends StatefulWidget {
 }
 
 class _SomViewerState extends State<SomViewer> {
-  ViewerLayer _activeLayer = ViewerLayer.grounding;
   int _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
   Timer? _liveStreamTimer;
   bool _liveStreaming = true;
   bool _hasLoadedLiveFrame = false;
-  bool _autoSwitch = true;
 
   @override
   void didUpdateWidget(SomViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    if (!_autoSwitch) return;
-
-    // Run just started
-    if (!oldWidget.isRunning && widget.isRunning) {
-      if (_activeLayer != ViewerLayer.grounding) {
-        setState(() => _activeLayer = ViewerLayer.grounding);
-      }
-      return;
-    }
-
-    // Run just completed
-    if (oldWidget.isRunning && !widget.isRunning) {
-      if (_activeLayer != ViewerLayer.grounding) {
-        setState(() => _activeLayer = ViewerLayer.grounding);
-      }
-      return;
-    }
-
-    // During run: switch dynamically based on active span component across mobile and canvas
-    if (widget.isRunning && widget.spans.length != oldWidget.spans.length) {
-      if (widget.spans.isNotEmpty) {
-        final latest = widget.spans.last;
-        final comp =
-            (latest['component'] ?? latest['name'] ?? '').toString().toLowerCase();
-
-        if (comp.contains('dispatch') ||
-            comp.contains('exec') ||
-            comp.contains('device') ||
-            comp.contains('mobile') ||
-            comp.contains('action')) {
-          // Execution/dispatch phase -> Device view (live mirror or clean screen)
-          if (_activeLayer != ViewerLayer.device) {
-            setState(() => _activeLayer = ViewerLayer.device);
-          }
-        } else if (comp.contains('sam') ||
-            comp.contains('percept') ||
-            comp.contains('verif') ||
-            comp.contains('ground')) {
-          // Perception / Verification phase -> SAM 3.1 masks and badges
-          if (_activeLayer != ViewerLayer.grounding) {
-            setState(() => _activeLayer = ViewerLayer.grounding);
-          }
-        }
-      }
+    if (oldWidget.driver != widget.driver) {
+      _hasLoadedLiveFrame = false;
+      _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
     }
   }
 
@@ -137,9 +93,7 @@ class _SomViewerState extends State<SomViewer> {
     final isObstructed = widget.selectedState.contains('modal_blocked');
     final isHealed = widget.selectedState.contains('modal_dismissed');
     final isLiveDriver = widget.driver == 'adb' || widget.driver == 'desktop';
-
-    // In device mode, load the real live stream if on ADB/Desktop; otherwise load the unsegmented frame.
-    final isShowingLiveMirror = _activeLayer == ViewerLayer.device && isLiveDriver;
+    final isShowingLiveMirror = isLiveDriver;
     _syncLiveStream(isShowingLiveMirror);
 
     final groundingUrl = widget.api.somFrameUrl(
@@ -148,18 +102,10 @@ class _SomViewerState extends State<SomViewer> {
       traceId: widget.traceId,
     );
 
-    final rawFrameUrl = widget.api.rawFrameUrl(
-      workflow: widget.workflow,
-      state: widget.selectedState,
-      traceId: widget.traceId,
-    );
-
     final liveUrl =
         '${widget.api.liveFrameUrl(driver: widget.driver)}&k=$_liveTimestamp';
 
-    final activeDisplayUrl = _activeLayer == ViewerLayer.grounding
-        ? groundingUrl
-        : (isShowingLiveMirror ? liveUrl : rawFrameUrl);
+    final activeDisplayUrl = isShowingLiveMirror ? liveUrl : groundingUrl;
 
     return SectionCard(
       title: 'Visual grounding',
@@ -231,68 +177,32 @@ class _SomViewerState extends State<SomViewer> {
                 });
               },
             ),
+            const SizedBox(width: 4),
           ],
+          // Single unified tab indicating active mode: Live Mirror for ADB/Desktop, SAM Grounding for simulated canvas
           Container(
-            padding: const EdgeInsets.all(2),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: MetaTheme.surfaceCardElevated,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: MetaTheme.surfaceCardBorder),
+              color: MetaTheme.metaBlue,
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _layerButton(
-                  layer: ViewerLayer.grounding,
-                  label: 'SAM Grounding',
-                  active: _activeLayer == ViewerLayer.grounding,
+                Icon(
+                  isShowingLiveMirror
+                      ? Icons.phone_android_rounded
+                      : Icons.radar,
+                  size: 13,
+                  color: Colors.white,
                 ),
-                _layerButton(
-                  layer: ViewerLayer.device,
-                  label: isLiveDriver ? 'Live Mirror' : 'Device View',
-                  active: _activeLayer == ViewerLayer.device,
-                ),
-                const SizedBox(width: 4),
-                InkWell(
-                  borderRadius: BorderRadius.circular(6),
-                  onTap: () {
-                    setState(() {
-                      _autoSwitch = !_autoSwitch;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _autoSwitch
-                          ? MetaTheme.metaBlueDark.withValues(alpha: 0.25)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: _autoSwitch
-                            ? MetaTheme.metaBlueDark.withValues(alpha: 0.6)
-                            : Colors.transparent,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          size: 11,
-                          color: _autoSwitch ? MetaTheme.metaBlueDark : Colors.grey,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          'AUTO',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: _autoSwitch ? MetaTheme.metaBlueDark : Colors.grey,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
+                const SizedBox(width: 5),
+                Text(
+                  isShowingLiveMirror ? 'Live Mirror' : 'SAM Grounding',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
                   ),
                 ),
               ],
@@ -376,7 +286,7 @@ class _SomViewerState extends State<SomViewer> {
           Container(
             height: isObstructed || isHealed
                 ? 350
-                : (widget.states.length > 1 ? 398 : 442),
+                : ((widget.states.length > 1 && !isShowingLiveMirror) ? 398 : 442),
             width: double.infinity,
             decoration: BoxDecoration(
               color: MetaTheme.obsidianBg,
@@ -498,25 +408,15 @@ class _SomViewerState extends State<SomViewer> {
                               ),
                             ),
                           ] else ...[
-                            Icon(
-                              _activeLayer == ViewerLayer.grounding
-                                  ? Icons.blur_on
-                                  : Icons.screenshot_monitor,
+                            const Icon(
+                              Icons.blur_on,
                               size: 12,
-                              color: _activeLayer == ViewerLayer.grounding
-                                  ? MetaTheme.emeraldVerified
-                                  : Colors.white70,
+                              color: MetaTheme.emeraldVerified,
                             ),
                             const SizedBox(width: 5),
-                            Text(
-                              _activeLayer == ViewerLayer.grounding
-                                  ? (widget.driver == 'adb'
-                                      ? 'Grounding · SAM 3.1 masks'
-                                      : 'Grounding · SAM 3.1 + PPT Laser Reticle')
-                                  : (widget.driver == 'adb'
-                                      ? 'Device View · Clean screen'
-                                      : 'Device View · Laser Grounding'),
-                              style: const TextStyle(
+                            const Text(
+                              'Grounding · SAM 3.1 + PPT Laser Reticle',
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -529,7 +429,7 @@ class _SomViewerState extends State<SomViewer> {
                   ),
 
                   // PPT Laser pointer indicator (for non-Android simulation & canvas)
-                  if (widget.driver != 'adb')
+                  if (!isShowingLiveMirror)
                     Positioned(
                       top: 10,
                       right: 10,
@@ -563,7 +463,7 @@ class _SomViewerState extends State<SomViewer> {
             ),
 
           // Stage Timeline Scrubber
-          if (widget.states.length > 1) ...[
+          if (widget.states.length > 1 && !isShowingLiveMirror) ...[
             const SizedBox(height: 10),
             _buildTimelineScrubber(),
           ],
@@ -687,36 +587,6 @@ class _SomViewerState extends State<SomViewer> {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _layerButton({
-    required ViewerLayer layer,
-    required String label,
-    required bool active,
-  }) {
-    return Semantics(
-      button: true,
-      label: label,
-      child: InkWell(
-        onTap: () => setState(() => _activeLayer = layer),
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: active ? MetaTheme.metaBlue : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active ? Colors.white : MetaTheme.inkSecondary,
-            ),
           ),
         ),
       ),
