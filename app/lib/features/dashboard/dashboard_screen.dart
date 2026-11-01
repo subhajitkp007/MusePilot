@@ -618,6 +618,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             traceId: _trace?.traceId,
                             isRunning: _running,
                             driver: _driver,
+                            spans: _spans,
+                            liveRecords: _liveRecords,
                           );
 
                           if (isWide) {

@@ -8,6 +8,7 @@ import io
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import time
@@ -198,14 +199,34 @@ class AdbDeviceDriver(DeviceDriver):
         self._run("shell", "input", "text", escaped)
 
     def capture_frame(self, state_label: str = "initial") -> CapturedFrame:
-        """Capture the device screen via screencap as a hashed frame."""
-        proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
-            [self._adb, "-s", self._serial, "exec-out", "screencap", "-p"],
-            capture_output=True,
-            check=True,
-            timeout=30,
-        )
-        image = Image.open(io.BytesIO(proc.stdout)).convert("RGB")
+        """Capture the device screen via fast raw screencap (falling back to -p PNG) as a hashed frame."""
+        image: Image.Image | None = None
+        try:
+            # Fast path: raw framebuffer dump (avoids mobile CPU PNG compression, 2x faster)
+            raw_proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
+                [self._adb, "-s", self._serial, "exec-out", "screencap"],
+                capture_output=True,
+                check=True,
+                timeout=15,
+            )
+            raw = raw_proc.stdout
+            if len(raw) >= 16:
+                w, h, _fmt = struct.unpack("<III", raw[:12])
+                expected_len = 16 + (w * h * 4)
+                if len(raw) == expected_len:
+                    image = Image.frombytes("RGBA", (w, h), raw[16:], "raw", "RGBA").convert("RGB")
+        except Exception as exc:
+            logger.debug(f"Raw screencap fast-path bypassed: {exc}")
+
+        if image is None:
+            proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
+                [self._adb, "-s", self._serial, "exec-out", "screencap", "-p"],
+                capture_output=True,
+                check=True,
+                timeout=30,
+            )
+            image = Image.open(io.BytesIO(proc.stdout)).convert("RGB")
+
         width, height = image.size
         return CapturedFrame(
             image=image,

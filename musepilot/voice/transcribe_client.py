@@ -70,7 +70,17 @@ class MuseVoiceTranscribeClient:
             workflow_id=workflow_id,
         ):
             t0 = time.perf_counter()
-            if self.settings.execution_mode == "live" and self.settings.meta_api_key:
+            if audio_path is not None and audio_path.exists() and self.settings.meta_api_key:
+                try:
+                    transcript_text = self._call_live_transcribe_api(audio_path)
+                except Exception as exc:
+                    logger.warning(
+                        f"Live voice transcribe failed ({exc}); falling back to default command."
+                    )
+                    transcript_text = self.DEFAULT_COMMANDS.get(
+                        workflow_id.lower(), self.DEFAULT_COMMANDS["w2"]
+                    )
+            elif self.settings.execution_mode == "live" and self.settings.meta_api_key:
                 if audio_path is None or not audio_path.exists():
                     raise LiveModelError("Live voice intake requires an existing WAV audio file.")
                 transcript_text = self._call_live_transcribe_api(audio_path)

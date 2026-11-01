@@ -217,8 +217,14 @@ class _RunPanelState extends State<RunPanel> {
         _snack('No audio captured. Try recording again.');
         return;
       }
+      final isWebm = bytes.length >= 4 &&
+          bytes[0] == 0x1A &&
+          bytes[1] == 0x45 &&
+          bytes[2] == 0xDF &&
+          bytes[3] == 0xA3;
       final transcript = await widget.api.transcribeAudio(
         audioBytes: bytes,
+        filename: isWebm ? 'command.webm' : 'command.wav',
         workflowId: widget.selectedWorkflow,
       );
       if (!mounted) return;

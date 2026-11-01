@@ -3,9 +3,12 @@
 /// SAM 3.1 Set-of-Mark grounding viewer with streamlined layer toggles.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/api_client.dart';
+import '../../../models/trace.dart';
 import '../../../theme/meta_theme.dart';
 import '../../../widgets/section_card.dart';
 
@@ -27,6 +30,8 @@ class SomViewer extends StatefulWidget {
     required this.traceId,
     this.isRunning = false,
     this.driver = 'simulated',
+    this.spans = const [],
+    this.liveRecords = const [],
     super.key,
   });
 
@@ -38,6 +43,8 @@ class SomViewer extends StatefulWidget {
   final String? traceId;
   final bool isRunning;
   final String driver;
+  final List<Map<String, dynamic>> spans;
+  final List<StepExecutionRecord> liveRecords;
 
   @override
   State<SomViewer> createState() => _SomViewerState();
@@ -46,6 +53,85 @@ class SomViewer extends StatefulWidget {
 class _SomViewerState extends State<SomViewer> {
   ViewerLayer _activeLayer = ViewerLayer.grounding;
   int _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
+  Timer? _liveStreamTimer;
+  bool _liveStreaming = true;
+  bool _hasLoadedLiveFrame = false;
+  bool _autoSwitch = true;
+
+  @override
+  void didUpdateWidget(SomViewer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (!_autoSwitch) return;
+
+    final isLiveDriver = widget.driver == 'adb' || widget.driver == 'desktop';
+    if (!isLiveDriver) return;
+
+    // Run just started
+    if (!oldWidget.isRunning && widget.isRunning) {
+      if (_activeLayer != ViewerLayer.grounding) {
+        setState(() => _activeLayer = ViewerLayer.grounding);
+      }
+      return;
+    }
+
+    // Run just completed
+    if (oldWidget.isRunning && !widget.isRunning) {
+      if (_activeLayer != ViewerLayer.grounding) {
+        setState(() => _activeLayer = ViewerLayer.grounding);
+      }
+      return;
+    }
+
+    // During live run: switch dynamically based on active span component
+    if (widget.isRunning && widget.spans.length != oldWidget.spans.length) {
+      if (widget.spans.isNotEmpty) {
+        final latest = widget.spans.last;
+        final comp =
+            (latest['component'] ?? latest['name'] ?? '').toString().toLowerCase();
+
+        if (comp.contains('dispatch') ||
+            comp.contains('exec') ||
+            comp.contains('device') ||
+            comp.contains('mobile')) {
+          // Execution/dispatch phase -> Live phone screen mirror
+          if (_activeLayer != ViewerLayer.device) {
+            setState(() => _activeLayer = ViewerLayer.device);
+          }
+        } else if (comp.contains('sam') ||
+            comp.contains('percept') ||
+            comp.contains('verif') ||
+            comp.contains('ground')) {
+          // Perception / Verification phase -> SAM 3.1 masks and badges
+          if (_activeLayer != ViewerLayer.grounding) {
+            setState(() => _activeLayer = ViewerLayer.grounding);
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _liveStreamTimer?.cancel();
+    super.dispose();
+  }
+
+  void _syncLiveStream(bool isShowingLiveMirror) {
+    if (isShowingLiveMirror && _liveStreaming) {
+      if (_liveStreamTimer == null || !_liveStreamTimer!.isActive) {
+        _liveStreamTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+          if (!mounted) return;
+          setState(() {
+            _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
+          });
+        });
+      }
+    } else {
+      _liveStreamTimer?.cancel();
+      _liveStreamTimer = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +142,7 @@ class _SomViewerState extends State<SomViewer> {
 
     // In device mode, load the real live stream if on ADB/Desktop; otherwise load the unsegmented frame.
     final isShowingLiveMirror = _activeLayer == ViewerLayer.device && isLiveDriver;
+    _syncLiveStream(isShowingLiveMirror);
 
     final groundingUrl = widget.api.somFrameUrl(
       workflow: widget.workflow,
@@ -82,7 +169,57 @@ class _SomViewerState extends State<SomViewer> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isShowingLiveMirror)
+          if (isShowingLiveMirror) ...[
+            InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: () {
+                setState(() {
+                  _liveStreaming = !_liveStreaming;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _liveStreaming
+                      ? MetaTheme.emeraldVerified.withValues(alpha: 0.15)
+                      : MetaTheme.surfaceCardElevated,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: _liveStreaming
+                        ? MetaTheme.emeraldVerified.withValues(alpha: 0.5)
+                        : MetaTheme.surfaceCardBorder,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: _liveStreaming
+                            ? MetaTheme.emeraldVerified
+                            : Colors.grey,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _liveStreaming ? 'STREAMING' : 'PAUSED',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: _liveStreaming
+                            ? MetaTheme.emeraldVerified
+                            : Colors.grey,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
             IconButton(
               icon: const Icon(
                 Icons.refresh,
@@ -96,6 +233,7 @@ class _SomViewerState extends State<SomViewer> {
                 });
               },
             ),
+          ],
           Container(
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
@@ -115,6 +253,49 @@ class _SomViewerState extends State<SomViewer> {
                   layer: ViewerLayer.device,
                   label: isLiveDriver ? 'Live Mirror' : 'Device View',
                   active: _activeLayer == ViewerLayer.device,
+                ),
+                const SizedBox(width: 4),
+                InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  onTap: () {
+                    setState(() {
+                      _autoSwitch = !_autoSwitch;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _autoSwitch
+                          ? MetaTheme.metaBlueDark.withValues(alpha: 0.25)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: _autoSwitch
+                            ? MetaTheme.metaBlueDark.withValues(alpha: 0.6)
+                            : Colors.transparent,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.auto_awesome,
+                          size: 11,
+                          color: _autoSwitch ? MetaTheme.metaBlueDark : Colors.grey,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          'AUTO',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: _autoSwitch ? MetaTheme.metaBlueDark : Colors.grey,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -216,12 +397,18 @@ class _SomViewerState extends State<SomViewer> {
                             liveUrl,
                             fit: BoxFit.contain,
                             gaplessPlayback: true,
-                            loadingBuilder: (context, child, progress) =>
-                                progress == null
-                                ? child
-                                : const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) {
+                                _hasLoadedLiveFrame = true;
+                                return child;
+                              }
+                              if (_hasLoadedLiveFrame) {
+                                return child;
+                              }
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            },
                             errorBuilder: (context, error, stack) => Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -249,12 +436,18 @@ class _SomViewerState extends State<SomViewer> {
                             activeDisplayUrl,
                             fit: BoxFit.contain,
                             gaplessPlayback: true,
-                            loadingBuilder: (context, child, progress) =>
-                                progress == null
-                                ? child
-                                : const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) {
+                                _hasLoadedLiveFrame = true;
+                                return child;
+                              }
+                              if (_hasLoadedLiveFrame) {
+                                return child;
+                              }
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            },
                             errorBuilder: (context, error, stack) => Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -297,7 +490,7 @@ class _SomViewerState extends State<SomViewer> {
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              'Live mirror · ${widget.driver.toUpperCase()} · tap refresh to update',
+                              'Live mirror · ${widget.driver.toUpperCase()} · ${_liveStreaming ? "Live Stream (Fast)" : "Paused"}',
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,

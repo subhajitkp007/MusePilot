@@ -49,15 +49,43 @@ class MusePilotApi {
 
   final String baseUrl;
   final http.Client _client;
+  String? _authToken;
+
+  /// Explicitly seed or update the bearer authorization token.
+  void setAuthToken(String? token) {
+    _authToken = token;
+  }
+
+  /// Automatically negotiate session bearer token from the server.
+  Future<String?> ensureAuthenticated() async {
+    if (_authToken != null) return _authToken;
+    try {
+      final res = await _client
+          .get(_uri('/api/auth/token'))
+          .timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        if (body is Map && body['token'] is String) {
+          _authToken = body['token'] as String;
+          return _authToken;
+        }
+      }
+    } catch (_) {
+      // Ignore in offline / test environments with mock transports.
+    }
+    return null;
+  }
 
   Uri _uri(String path, [Map<String, String>? query]) =>
       Uri.parse('$baseUrl$path').replace(queryParameters: query);
 
   Future<dynamic> _getJson(String path, [Map<String, String>? query]) async {
     late http.Response response;
+    final headers = <String, String>{};
+    if (_authToken != null) headers['Authorization'] = 'Bearer $_authToken';
     try {
       response = await _client
-          .get(_uri(path, query))
+          .get(_uri(path, query), headers: headers.isEmpty ? null : headers)
           .timeout(const Duration(seconds: 30));
     } on TimeoutException {
       throw ApiException('Request to $path timed out.', statusCode: 408);
@@ -84,9 +112,12 @@ class MusePilotApi {
   }
 
   /// Fetch the pre-flight readiness report.
-  Future<HealthReport> getHealth() async => HealthReport.fromJson(
-    await _getJson('/api/health') as Map<String, dynamic>,
-  );
+  Future<HealthReport> getHealth() async {
+    await ensureAuthenticated();
+    return HealthReport.fromJson(
+      await _getJson('/api/health') as Map<String, dynamic>,
+    );
+  }
 
   /// Fetch non-secret runtime configuration.
   Future<ServerConfig> getConfig() async => ServerConfig.fromJson(
@@ -115,11 +146,13 @@ class MusePilotApi {
       'driver': driver,
     };
     if (customIntent != null) payload['custom_intent'] = customIntent;
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (_authToken != null) headers['Authorization'] = 'Bearer $_authToken';
     try {
       response = await _client
           .post(
             _uri('/api/runs'),
-            headers: const {'Content-Type': 'application/json'},
+            headers: headers,
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 120));
@@ -178,10 +211,14 @@ class MusePilotApi {
     String filename = 'command.wav',
     String workflowId = 'w2',
   }) async {
+    await ensureAuthenticated();
     final request = http.MultipartRequest(
       'POST',
       _uri('/api/voice/transcribe'),
     );
+    if (_authToken != null) {
+      request.headers['Authorization'] = 'Bearer $_authToken';
+    }
     request.fields['workflow_id'] = workflowId;
     request.files.add(
       http.MultipartFile.fromBytes('audio', audioBytes, filename: filename),
@@ -228,9 +265,14 @@ class MusePilotApi {
   }
 
   /// Build a live target preview frame URL.
-  String liveFrameUrl({String driver = 'adb', String? serial}) {
+  String liveFrameUrl({
+    String driver = 'adb',
+    String? serial,
+    String format = 'jpeg',
+  }) {
     final query = <String, String>{
       'driver': driver,
+      'format': format,
       't': DateTime.now().millisecondsSinceEpoch.toString(),
     };
     if (serial != null) query['serial'] = serial;
