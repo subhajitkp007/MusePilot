@@ -140,6 +140,24 @@ def build_parser() -> argparse.ArgumentParser:
     # `health` command
     sub.add_parser("health", help="Run pre-flight calibration and compliance checks")
 
+    # `mcp` command
+    mcp_p = sub.add_parser(
+        "mcp",
+        help="Run the Model Context Protocol (MCP) server for Claude Desktop, Cursor, and agent frameworks",
+    )
+    mcp_p.add_argument(
+        "--transport",
+        choices=["stdio", "sse"],
+        default="stdio",
+        help="Transport protocol: stdio (for Cursor/Claude Desktop) or sse (default: stdio)",
+    )
+    mcp_p.add_argument(
+        "--port",
+        type=int,
+        default=8502,
+        help="Port for SSE transport (default: 8502)",
+    )
+
     # `jwt-token` command
     jwt_p = sub.add_parser(
         "jwt-token", help="Generate an enterprise HS256 JWT for API authentication"
@@ -165,6 +183,18 @@ def main(argv: list[str] | None = None) -> int:
         report = run_health_check()
         print(json.dumps(asdict(report), indent=2))
         return 0 if report.passed else 1
+
+    if args.command == "mcp":
+        from musepilot.mcp.server import run_mcp_server
+
+        try:
+            run_mcp_server(
+                transport=args.transport,
+                port=args.port if args.transport == "sse" else None,
+            )
+        except KeyboardInterrupt:
+            return 0
+        return 0
 
     if args.command == "jwt-token":
         from musepilot.config import get_settings

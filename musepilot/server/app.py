@@ -27,6 +27,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from musepilot.config import get_settings
 from musepilot.contracts.schemas import (
+    WORKFLOWS,
     LiveModelError,
     RunRequest,
     RunTrace,
@@ -55,19 +56,6 @@ from musepilot.trace import TraceStore
 from musepilot.voice import MuseVoiceTranscribeClient
 
 logger = get_logger("musepilot.server")
-
-WORKFLOWS: tuple[WorkflowInfo, ...] = (
-    WorkflowInfo(
-        workflow_id="w1",
-        title="W1: Precision Canvas Calibration",
-        description="Calibrate frequency slider, damping toggle, gain input, and benchmark on a 0-DOM-node canvas.",
-    ),
-    WorkflowInfo(
-        workflow_id="w2",
-        title="W2: Voice Incident Dispatch + Self-Healing",
-        description="Transcribe a spoken incident command and dispatch it across apps with modal recovery.",
-    ),
-)
 
 _STATE_LABEL_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 _TRACE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")

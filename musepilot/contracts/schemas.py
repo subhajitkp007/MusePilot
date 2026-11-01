@@ -275,6 +275,20 @@ class WorkflowInfo(BaseModel):
     description: str
 
 
+WORKFLOWS: tuple[WorkflowInfo, ...] = (
+    WorkflowInfo(
+        workflow_id="w1",
+        title="W1: Precision Canvas Calibration",
+        description="Calibrate frequency slider, damping toggle, gain input, and benchmark on a 0-DOM-node canvas.",
+    ),
+    WorkflowInfo(
+        workflow_id="w2",
+        title="W2: Voice Incident Dispatch + Self-Healing",
+        description="Transcribe a spoken incident command and dispatch it across apps with modal recovery.",
+    ),
+)
+
+
 class TraceSummary(BaseModel):
     """Lightweight run-trace listing entry for HUD history views."""
 

@@ -16,6 +16,7 @@ itsdangerous==2.2.0
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 meta_sam_parser==0.1.0
+mcp>=1.0.0
 numpy>=1.26.0,<3.0.0
 packaging==26.3
 pillow==13.0.0
