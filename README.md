@@ -159,7 +159,9 @@ flowchart TD
 
 Conventional VLM agents fail because predicting coordinate numbers from high-resolution images is an ungrounded hallucination task. MusePilot eliminates this vulnerability mathematically:
 
-$$\text{Action Receipt} = \operatorname{Actuate}\left(\frac{\mathbf{c}_{\text{SAM}}(\text{mask\_id})}{S_{\text{DPI}}}\right), \quad \text{where } \mathbf{c}_{\text{SAM}} = \left(\frac{1}{|\mathcal{M}|} \sum_{p \in \mathcal{M}} x_p, \, \frac{1}{|\mathcal{M}|} \sum_{p \in \mathcal{M}} y_p\right)$$
+```math
+\text{Action Receipt} = \text{Actuate}\left(\frac{\mathbf{c}_{\text{SAM}}(\text{mask\_id})}{S_{\text{DPI}}}\right), \quad \text{where } \mathbf{c}_{\text{SAM}} = \left(\frac{1}{|\mathcal{M}|} \sum_{p \in \mathcal{M}} x_p, \quad \frac{1}{|\mathcal{M}|} \sum_{p \in \mathcal{M}} y_p\right)
+```
 
 1. **Set-of-Mark Grounding (Meta SAM 3.1):**  
    Every visual component is segmented into a sub-pixel mask. High-contrast numbered badges (`Mask #01`, `Mask #02`...) are stamped over interactive regions.
