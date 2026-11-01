@@ -50,9 +50,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   HealthReport? _health;
   List<WorkflowInfo> _workflows = const [];
-  String _workflow = 'w1';
+  String _workflow = kSolutionScenarios.first.workflowId;
   bool _injectModal = false;
-  String _driver = 'simulated';
+  String _driver = (kSolutionScenarios.first.id == 'mobile_adb' ? 'adb' : 'simulated');
   String _selectedScenarioId = kSolutionScenarios.first.id;
 
   late final TextEditingController _intentController;

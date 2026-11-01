@@ -178,7 +178,7 @@ async def run_storyboard(ws_url):
 
         print("  → Selecting Canvas and creative tools scenario...")
         await click_semantic_by_query(
-            ws, "Canvas and creative tools", "Canvas & Creative Tools Scenario"
+            ws, "Canvas", "Canvas & Creative Tools Scenario"
         )
         await asyncio.sleep(2.0)
 

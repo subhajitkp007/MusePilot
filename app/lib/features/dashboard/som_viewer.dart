@@ -64,9 +64,6 @@ class _SomViewerState extends State<SomViewer> {
 
     if (!_autoSwitch) return;
 
-    final isLiveDriver = widget.driver == 'adb' || widget.driver == 'desktop';
-    if (!isLiveDriver) return;
-
     // Run just started
     if (!oldWidget.isRunning && widget.isRunning) {
       if (_activeLayer != ViewerLayer.grounding) {
@@ -83,7 +80,7 @@ class _SomViewerState extends State<SomViewer> {
       return;
     }
 
-    // During live run: switch dynamically based on active span component
+    // During run: switch dynamically based on active span component across mobile and canvas
     if (widget.isRunning && widget.spans.length != oldWidget.spans.length) {
       if (widget.spans.isNotEmpty) {
         final latest = widget.spans.last;
@@ -93,8 +90,9 @@ class _SomViewerState extends State<SomViewer> {
         if (comp.contains('dispatch') ||
             comp.contains('exec') ||
             comp.contains('device') ||
-            comp.contains('mobile')) {
-          // Execution/dispatch phase -> Live phone screen mirror
+            comp.contains('mobile') ||
+            comp.contains('action')) {
+          // Execution/dispatch phase -> Device view (live mirror or clean screen)
           if (_activeLayer != ViewerLayer.device) {
             setState(() => _activeLayer = ViewerLayer.device);
           }
