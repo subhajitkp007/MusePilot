@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MusePilot — Meta Global AI Hackathon 2026 Keynote Deck</title>
+  <link rel="icon" type="image/jpeg" href="/assets/img/musepilot_brand_icon.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -104,18 +105,14 @@
       gap: 12px;
     }
 
-    .meta-logo {
-      width: 28px;
-      height: 28px;
-      border-radius: 7px;
-      background: linear-gradient(135deg, var(--meta-blue), var(--cyan));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 14px;
-      color: #fff;
+    .brand-emblem-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid rgba(0, 242, 254, 0.55);
       box-shadow: 0 0 14px rgba(0, 242, 254, 0.45);
+      display: block;
     }
 
     .brand-title {
@@ -841,7 +838,7 @@
   <!-- Top Keynote HUD Bar -->
   <header class="hud-bar">
     <div class="brand-wrap">
-      <div class="meta-logo">M</div>
+      <img src="/assets/img/musepilot_brand_icon.jpg" alt="MusePilot Emblem" class="brand-emblem-icon">
       <div class="brand-title">
         MUSE<span class="glow">PILOT</span>
         <span class="hud-badge">META GLOBAL AI HACKATHON 2026</span>
@@ -880,7 +877,10 @@
             <span class="badge-pill cyan">APACHE 2.0 OPEN SOURCE</span>
           </div>
 
-          <h1 class="hero-title">MUSE<span class="grad">PILOT</span></h1>
+          <div style="display: flex; align-items: center; gap: 16px; margin: 4px 0 6px;">
+            <img src="/assets/img/musepilot_brand_icon.jpg" alt="MusePilot 3D Brand Emblem" style="width: 68px; height: 68px; border-radius: 16px; border: 1.5px solid rgba(0, 242, 254, 0.65); box-shadow: 0 0 28px rgba(0, 242, 254, 0.35); object-fit: cover; flex-shrink: 0;">
+            <h1 class="hero-title" style="margin: 0;">MUSE<span class="grad">PILOT</span></h1>
+          </div>
 
           <p class="hero-tagline">
             <strong>The Zero-Coordinate Multimodal GUI Agent.</strong><br>
@@ -933,13 +933,16 @@
         </div>
 
         <div class="col-stack" style="height: 100%; justify-content: center;">
-          <div class="screenshot-frame" style="aspect-ratio: 16 / 9.4;">
+          <div class="screenshot-frame" style="aspect-ratio: 16 / 9.2;">
             <div class="img-stage">
-              <img src="/assets/img/hero_layered_workspace.jpg" alt="MusePilot 3D Glassmorphic Set-of-Mark Workspace">
+              <img id="heroShowcaseImg" src="/assets/img/musepilot_brand_hero.jpg" alt="MusePilot Official 3D Brand Identity & Multi-Surface Vision Core">
             </div>
             <div class="screenshot-caption">
-              <span>SET-OF-MARK [01]–[04] POLYGON GROUNDING</span>
-              <span>ZERO RAW [X, Y] COORDINATES EMITTED</span>
+              <span id="heroShowcaseCaption">OFFICIAL MUSEPILOT 3D VISION CORE · MOBILE · CANVAS · MCP</span>
+              <div style="display: flex; gap: 6px;">
+                <button class="sim-tab-btn active" style="padding: 2px 8px; font-size: 9px;" onclick="setHeroArtwork('brand', this)">🏛️ Brand Core</button>
+                <button class="sim-tab-btn" style="padding: 2px 8px; font-size: 9px;" onclick="setHeroArtwork('workspace', this)">🔬 SoM Layers</button>
+              </div>
             </div>
           </div>
 
@@ -2117,9 +2120,12 @@ subprocess.<span class="fn">run</span>([<span class="str">"adb"</span>, <span cl
 
       <div class="card cyan-card" style="padding: 10px 16px; flex-shrink: 0;">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <div style="font-size: 13px; font-weight: 800; color: #fff;">🏆 Ready for Live Judge Inspection &amp; Q&amp;A</div>
-            <div style="font-size: 11px; color: var(--text-secondary);">Launch any live environment below without leaving this presentation deck:</div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="/assets/img/musepilot_brand_icon.jpg" alt="MusePilot Emblem" style="width: 38px; height: 38px; border-radius: 9px; border: 1px solid rgba(0, 242, 254, 0.55); box-shadow: 0 0 16px rgba(0, 242, 254, 0.35);">
+            <div>
+              <div style="font-size: 13px; font-weight: 800; color: #fff;">🏆 MUSEPILOT — Ready for Live Judge Inspection &amp; Q&amp;A</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Launch any live environment below without leaving this presentation deck:</div>
+            </div>
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="nav-btn primary" onclick="openLiveModal('/tradingview_live.html', 'Live TradingView Pro WebGL Canvas Terminal')">
@@ -2248,10 +2254,29 @@ subprocess.<span class="fn">run</span>([<span class="str">"adb"</span>, <span cl
       showSlide(0);
     }
 
+    // Interactive Hero Artwork Switcher on Slide 1
+    function setHeroArtwork(mode, btnEl) {
+      if (btnEl && btnEl.parentElement) {
+        btnEl.parentElement.querySelectorAll('.sim-tab-btn').forEach(b => b.classList.remove('active'));
+        btnEl.classList.add('active');
+      }
+      const img = document.getElementById('heroShowcaseImg');
+      const cap = document.getElementById('heroShowcaseCaption');
+      if (mode === 'brand') {
+        img.src = '/assets/img/musepilot_brand_hero.jpg';
+        cap.textContent = 'OFFICIAL MUSEPILOT 3D VISION CORE · MOBILE · CANVAS · MCP';
+      } else {
+        img.src = '/assets/img/hero_layered_workspace.jpg';
+        cap.textContent = 'SET-OF-MARK [01]–[04] POLYGON GROUNDING · ZERO [X, Y] DRIFT';
+      }
+    }
+
     // Interactive Scenario Switcher on Slide 2
     function setDriftScenario(mode, btnEl) {
-      document.querySelectorAll('.sim-tab-btn').forEach(b => b.classList.remove('active'));
-      if (btnEl) btnEl.classList.add('active');
+      if (btnEl && btnEl.parentElement) {
+        btnEl.parentElement.querySelectorAll('.sim-tab-btn').forEach(b => b.classList.remove('active'));
+        btnEl.classList.add('active');
+      }
 
       const badge = document.getElementById('simScenarioBadge');
       const redCap = document.getElementById('svgRedCaption');
