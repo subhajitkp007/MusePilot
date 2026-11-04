@@ -61,7 +61,26 @@
     .header-badges {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+    }
+    .som-toggle-btn {
+      background: rgba(41, 98, 255, 0.2);
+      border: 1px solid #2962ff;
+      color: #93c5fd;
+      border-radius: 4px;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+    .som-toggle-btn.active {
+      background: #2962ff;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(41, 98, 255, 0.6);
     }
     .live-feed-pill {
       background: rgba(18, 55, 40, 0.8);
@@ -95,9 +114,9 @@
       color: #26a69a;
     }
     .action-btn {
-      background: #2962ff;
+      background: #10b981;
       color: #fff;
-      border: 1px solid #60a5fa;
+      border: 1px solid #34d399;
       border-radius: 4px;
       padding: 4px 10px;
       font-size: 11px;
@@ -109,8 +128,8 @@
       transition: all 0.2s;
     }
     .action-btn:hover {
-      background: #1d4ed8;
-      box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
+      background: #059669;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
     }
     .open-external-btn {
       background: #2a2e39;
@@ -139,7 +158,7 @@
       position: relative;
     }
     .control-panel {
-      width: 330px;
+      width: 340px;
       background: #161a25;
       border-right: 1px solid #2a2e39;
       display: flex;
@@ -159,11 +178,19 @@
       flex-direction: column;
       gap: 8px;
       position: relative;
-      transition: border-color 0.3s;
+      transition: all 0.3s;
+    }
+    .card-container.som-active {
+      border-color: #2962ff;
+      box-shadow: 0 0 10px rgba(41, 98, 255, 0.3);
+    }
+    .card-container.som-verified {
+      border-color: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
     }
     .card-container.target-active {
-      border-color: #ff2d55;
-      box-shadow: 0 0 12px rgba(255, 45, 85, 0.3);
+      border-color: #ff2d55 !important;
+      box-shadow: 0 0 14px rgba(255, 45, 85, 0.4) !important;
     }
     .card-label {
       font-size: 11px;
@@ -175,13 +202,43 @@
       justify-content: space-between;
       align-items: center;
     }
-    .mask-badge {
+    /* Meta SAM 3.1 Badge Circle */
+    .som-badge-circle {
+      width: 22px;
+      height: 22px;
+      background: #2962ff;
+      color: #fff;
+      border-radius: 50%;
+      font-weight: 900;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #fff;
+      box-shadow: 0 0 8px rgba(41, 98, 255, 0.8);
+      position: absolute;
+      top: -9px;
+      left: -9px;
+      z-index: 15;
+      transition: all 0.3s;
+    }
+    .som-badge-circle.verified {
+      background: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.9);
+    }
+    .som-meta-tag {
+      font-family: 'SF Mono', Consolas, monospace;
       font-size: 9px;
-      background: rgba(41, 98, 255, 0.2);
-      border: 1px solid #2962ff;
       color: #93c5fd;
-      padding: 1px 5px;
+      background: rgba(41, 98, 255, 0.15);
+      border: 1px solid rgba(41, 98, 255, 0.4);
+      padding: 2px 6px;
       border-radius: 3px;
+    }
+    .som-meta-tag.verified {
+      color: #6ee7b7;
+      background: rgba(16, 185, 129, 0.15);
+      border-color: #10b981;
     }
     .timeframe-group {
       display: flex;
@@ -406,6 +463,9 @@
       </div>
     </div>
     <div class="header-badges">
+      <button class="som-toggle-btn active" id="som-toggle-btn" onclick="toggleSomOverlay()">
+        <span>👁️ SAM 3.1 GROUNDING: ON</span>
+      </button>
       <button class="action-btn" id="auto-run-btn" onclick="autoRunDemo()">
         <span>⚡ AUTO-RUN TRADING FLOW</span>
       </button>
@@ -442,10 +502,11 @@
 
     <div class="control-panel">
       <!-- Mask 1: Candlestick Timeframe Selector -->
-      <div class="card-container" id="mask-01-card">
+      <div class="card-container som-active" id="mask-01-card">
+        <div class="som-badge-circle" id="som-badge-01">01</div>
         <div class="card-label">
-          <span>1. TIMEFRAME INTERVAL</span>
-          <span class="mask-badge">MASK #01</span>
+          <span style="padding-left: 18px;">1. TIMEFRAME INTERVAL</span>
+          <span class="som-meta-tag" id="som-tag-01">SAM 3.1 · 98.4%</span>
         </div>
         <div class="timeframe-group">
           <button class="tf-btn" id="btn-15m" onclick="selectTf('15m')">15m</button>
@@ -457,10 +518,11 @@
       </div>
 
       <!-- Mask 2: Algorithmic Indicator Overlay -->
-      <div class="card-container" id="mask-02-card">
+      <div class="card-container som-active" id="mask-02-card">
+        <div class="som-badge-circle" id="som-badge-02">02</div>
         <div class="card-label">
-          <span>2. INDICATOR OVERLAY</span>
-          <span class="mask-badge">MASK #02</span>
+          <span style="padding-left: 18px;">2. INDICATOR OVERLAY</span>
+          <span class="som-meta-tag" id="som-tag-02">SAM 3.1 · 99.1%</span>
         </div>
         <button class="toggle-control" id="ema-toggle-btn" onclick="toggleEma()">
           <span id="ema-toggle-label">EMA 20/50/200: ENABLED [GOLDEN CROSS]</span>
@@ -469,19 +531,21 @@
       </div>
 
       <!-- Mask 3: Risk Management & Order Size -->
-      <div class="card-container" id="mask-03-card">
+      <div class="card-container som-active" id="mask-03-card">
+        <div class="som-badge-circle" id="som-badge-03">03</div>
         <div class="card-label">
-          <span>3. ORDER CONTRACT SIZE</span>
-          <span class="mask-badge">MASK #03</span>
+          <span style="padding-left: 18px;">3. ORDER CONTRACT SIZE</span>
+          <span class="som-meta-tag" id="som-tag-03">SAM 3.1 · 97.6%</span>
         </div>
         <input class="input-box" id="contract-size-input" type="text" value="CONTRACT_SIZE: 1.25 BTC [LIMIT $68,450.00]" readonly />
       </div>
 
       <!-- Mask 4: Trade Order Dispatch -->
-      <div class="card-container" id="mask-04-card">
+      <div class="card-container som-active" id="mask-04-card">
+        <div class="som-badge-circle" id="som-badge-04">04</div>
         <div class="card-label">
-          <span>4. TRADE DISPATCH</span>
-          <span class="mask-badge">MASK #04</span>
+          <span style="padding-left: 18px;">4. TRADE DISPATCH</span>
+          <span class="som-meta-tag" id="som-tag-04">SAM 3.1 · 99.8%</span>
         </div>
         <button class="dispatch-btn filled" id="dispatch-btn" onclick="executeOrder()">
           ORDER FILLED [100% VERIFIED]
@@ -505,7 +569,7 @@
       <span class="footer-indicator">● LIVE HTML5 CANVAS</span>
       <span>• Zero DOM Nodes in Viewport • Playwright/Selenium Locators Fail • Meta SAM 3.1 Grounded</span>
     </div>
-    <div>TradingView Lightweight Charts™ v5.2.1 • Binance WebSocket Feed</div>
+    <div>TradingView Lightweight Charts™ v5.2.1 • Meta SAM 3.1 Set-of-Mark Grounding</div>
   </footer>
 
   <script>
@@ -610,6 +674,27 @@
       document.getElementById('overlay-price').textContent = formatted;
     }, 1200);
 
+    // Toggle SAM 3.1 Grounding Badges visibility
+    let somOverlayVisible = true;
+    function toggleSomOverlay() {
+      somOverlayVisible = !somOverlayVisible;
+      const btn = document.getElementById('som-toggle-btn');
+      const badges = document.querySelectorAll('.som-badge-circle, .som-meta-tag');
+      const cards = document.querySelectorAll('.card-container');
+
+      if (somOverlayVisible) {
+        btn.classList.add('active');
+        btn.innerHTML = '<span>👁️ SAM 3.1 GROUNDING: ON</span>';
+        badges.forEach(b => b.style.display = '');
+        cards.forEach(c => c.classList.add('som-active'));
+      } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '<span>👁️ SAM 3.1 GROUNDING: OFF</span>';
+        badges.forEach(b => b.style.display = 'none');
+        cards.forEach(c => c.classList.remove('som-active', 'som-verified'));
+      }
+    }
+
     // Action function: Show PPT Laser Pointer over a target element
     function pointLaserAt(elementId, labelText) {
       const el = document.getElementById(elementId);
@@ -636,6 +721,45 @@
       const laser = document.getElementById('ppt-laser-pointer');
       if (laser) laser.style.display = 'none';
       document.querySelectorAll('.card-container').forEach(c => c.classList.remove('target-active'));
+    }
+
+    function markBadgeVerified(id, text) {
+      const badge = document.getElementById('som-badge-' + id);
+      const tag = document.getElementById('som-tag-' + id);
+      const card = document.getElementById('mask-' + id + '-card');
+      if (badge) {
+        badge.classList.add('verified');
+        badge.textContent = id + ' ✓';
+      }
+      if (tag) {
+        tag.classList.add('verified');
+        tag.textContent = text || 'VERIFIED 100%';
+      }
+      if (card) {
+        card.classList.add('som-verified');
+      }
+    }
+
+    function resetBadges() {
+      ['01', '02', '03', '04'].forEach(id => {
+        const badge = document.getElementById('som-badge-' + id);
+        const tag = document.getElementById('som-tag-' + id);
+        const card = document.getElementById('mask-' + id + '-card');
+        if (badge) {
+          badge.classList.remove('verified');
+          badge.textContent = id;
+        }
+        if (tag) {
+          tag.classList.remove('verified');
+        }
+        if (card) {
+          card.classList.remove('som-verified');
+        }
+      });
+      document.getElementById('som-tag-01').textContent = 'SAM 3.1 · 98.4%';
+      document.getElementById('som-tag-02').textContent = 'SAM 3.1 · 99.1%';
+      document.getElementById('som-tag-03').textContent = 'SAM 3.1 · 97.6%';
+      document.getElementById('som-tag-04').textContent = 'SAM 3.1 · 99.8%';
     }
 
     // Step 1: Select Timeframe
@@ -726,27 +850,38 @@
         setEmaState(true);
         setContractSize('CONTRACT_SIZE: 1.25 BTC [LIMIT $68,450.00]');
         setOrderExecution(true);
+        markBadgeVerified('01', 'CALIBRATED · 4H');
+        markBadgeVerified('02', 'ENABLED · GOLDEN CROSS');
+        markBadgeVerified('03', 'LOCKED · 1.25 BTC');
+        markBadgeVerified('04', 'VERIFIED · 100% FILLED');
         pointLaserAt('dispatch-btn', '✦ ACTUATION: CLICK MASK #04 [BUY ORDER]');
       } else if (state.includes('step_3')) {
         selectTf('4h');
         setEmaState(true);
         setContractSize('CONTRACT_SIZE: 1.25 BTC [LIMIT $68,450.00]');
         setOrderExecution(false);
+        markBadgeVerified('01', 'CALIBRATED · 4H');
+        markBadgeVerified('02', 'ENABLED · GOLDEN CROSS');
+        markBadgeVerified('03', 'LOCKED · 1.25 BTC');
         pointLaserAt('contract-size-input', '✦ ACTUATION: TYPE MASK #03 [1.25 BTC]');
       } else if (state.includes('step_2')) {
         selectTf('4h');
         setEmaState(true);
         setContractSize('CONTRACT_SIZE: <enter size>');
         setOrderExecution(false);
+        markBadgeVerified('01', 'CALIBRATED · 4H');
+        markBadgeVerified('02', 'ENABLED · GOLDEN CROSS');
         pointLaserAt('ema-toggle-btn', '✦ ACTUATION: TOGGLE MASK #02 [EMA CROSS]');
       } else if (state.includes('step_1')) {
         selectTf('4h');
         setEmaState(false);
         setContractSize('CONTRACT_SIZE: <enter size>');
         setOrderExecution(false);
+        markBadgeVerified('01', 'CALIBRATED · 4H');
         pointLaserAt('btn-4h', '✦ ACTUATION: CLICK MASK #01 [4H INTERVAL]');
       } else {
         // Initial state
+        resetBadges();
         selectTf('15m');
         setEmaState(false);
         setContractSize('CONTRACT_SIZE: <awaiting plan>');
@@ -780,7 +915,7 @@
         btn.textContent = '✓ DEMO TRADE COMPLETE';
         setTimeout(() => {
           btn.textContent = '⚡ AUTO-RUN TRADING FLOW';
-          btn.style.background = '#2962ff';
+          btn.style.background = '#10b981';
         }, 3000);
       }, 5100);
     }
