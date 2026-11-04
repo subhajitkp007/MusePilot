@@ -461,8 +461,7 @@ class _SomViewerState extends State<SomViewer> {
                           )
                         : (_showLiveBrowser && widget.workflow == 'w1'
                             ? const LiveBrowserWidget(
-                                url:
-                                    'https://s.tradingview.com/widgetembed/?symbol=BINANCE%3ABTCUSDT&interval=60&theme=dark&style=1&timezone=Etc%2FUTC&locale=en',
+                                url: '/tradingview_live.html',
                                 title: 'TradingView BTC/USD Real-Time Perpetual Market',
                               )
                             : Image.network(

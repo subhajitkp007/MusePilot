@@ -223,6 +223,8 @@ __marimo__/
 app/.dart_tool/
 app/build/
 musepilot/server/static/web/
+!musepilot/server/static/web/tradingview_live.html
+!musepilot/server/static/web/lightweight-charts.standalone.production.js
 
 # problem statement & local runtime directories
 project_intial_idea.md

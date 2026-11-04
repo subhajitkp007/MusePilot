@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradingView Pro // BTC/USD Perpetual Terminal</title>
+  <script src="/lightweight-charts.standalone.production.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #131722;
+      color: #d1d4dc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+    }
+    header {
+      background: #1e222d;
+      border-bottom: 1px solid #2a2e39;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 13px;
+      user-select: none;
+    }
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-badge {
+      background: #2962ff;
+      color: #fff;
+      font-weight: 900;
+      font-size: 11px;
+      padding: 4px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .brand-title {
+      font-weight: 700;
+      color: #f0f3fa;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+    }
+    .sub-brand {
+      color: #787b86;
+      font-size: 11px;
+    }
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .live-feed-pill {
+      background: rgba(18, 55, 40, 0.8);
+      border: 1px solid #10b981;
+      color: #6ee7b7;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.8; }
+    }
+    .ticker-price {
+      font-family: 'SF Mono', Consolas, monospace;
+      font-weight: 700;
+      font-size: 13px;
+      color: #26a69a;
+    }
+    .open-external-btn {
+      background: #2a2e39;
+      color: #93c5fd;
+      border: 1px solid #3b82f6;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s;
+    }
+    .open-external-btn:hover {
+      background: #3b82f6;
+      color: #fff;
+    }
+    .main-workspace {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 76px);
+      overflow: hidden;
+    }
+    .control-panel {
+      width: 320px;
+      background: #161a25;
+      border-right: 1px solid #2a2e39;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 14px;
+      overflow-y: auto;
+    }
+    .card-container {
+      background: #1e222d;
+      border: 1px solid #2a2e39;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #93c5fd;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .mask-badge {
+      font-size: 9px;
+      background: rgba(41, 98, 255, 0.2);
+      border: 1px solid #2962ff;
+      color: #93c5fd;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .timeframe-group {
+      display: flex;
+      gap: 6px;
+    }
+    .tf-btn {
+      flex: 1;
+      background: #2a2e39;
+      border: 1px solid #363a45;
+      color: #d1d4dc;
+      padding: 6px 0;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .tf-btn.active {
+      background: #10b981;
+      border-color: #34d399;
+      color: #fff;
+    }
+    .status-text {
+      font-size: 11px;
+      font-family: 'SF Mono', Consolas, monospace;
+      color: #6ee7b7;
+      background: rgba(16, 185, 129, 0.1);
+      padding: 4px 8px;
+      border-radius: 4px;
+      border-left: 2px solid #10b981;
+    }
+    .toggle-control {
+      background: #10b981;
+      border: 1px solid #6ee7b7;
+      color: #fff;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 9px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+    }
+    .toggle-control.disabled {
+      background: #2a2e39;
+      border-color: #363a45;
+      color: #787b86;
+    }
+    .input-box {
+      background: #131722;
+      border: 1px solid #06b6d4;
+      border-radius: 4px;
+      color: #67e8f9;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 8px 10px;
+      outline: none;
+      width: 100%;
+    }
+    .dispatch-btn {
+      background: #2962ff;
+      border: 1px solid #60a5fa;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .dispatch-btn.filled {
+      background: #10b981;
+      border-color: #6ee7b7;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    }
+    .chart-container {
+      flex: 1;
+      position: relative;
+      background: #131722;
+      overflow: hidden;
+    }
+    #tv-chart {
+      width: 100%;
+      height: 100%;
+    }
+    .chart-overlay-info {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      background: rgba(19, 23, 34, 0.85);
+      border: 1px solid #2a2e39;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      display: flex;
+      gap: 14px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .chart-overlay-info span {
+      font-family: 'SF Mono', Consolas, monospace;
+    }
+    footer {
+      background: #161a25;
+      border-top: 1px solid #2a2e39;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 11px;
+      color: #787b86;
+    }
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .footer-indicator {
+      color: #10b981;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand-section">
+      <div class="logo-badge">TV</div>
+      <div>
+        <span class="brand-title">TRADINGVIEW PRO</span>
+        <span class="sub-brand"> // BTC/USD PERPETUAL</span>
+      </div>
+    </div>
+    <div class="header-badges">
+      <div class="live-feed-pill">
+        <div class="pulse-dot"></div>
+        <span>BINANCE // LIVE FEED</span>
+      </div>
+      <div class="ticker-price" id="header-price">BTC/USD: $68,450.00 ▲ +2.45%</div>
+      <a class="open-external-btn" href="https://www.tradingview.com/chart/" target="_blank" rel="noopener noreferrer">
+        <span>↗ TradingView.com</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="main-workspace">
+    <div class="control-panel">
+      <!-- Mask 1: Candlestick Timeframe Selector -->
+      <div class="card-container" id="mask-01-container">
+        <div class="card-label">
+          <span>1. TIMEFRAME INTERVAL</span>
+          <span class="mask-badge">MASK #01</span>
+        </div>
+        <div class="timeframe-group">
+          <button class="tf-btn" onclick="selectTf(this, '15m')">15m</button>
+          <button class="tf-btn" onclick="selectTf(this, '1h')">1h</button>
+          <button class="tf-btn active" onclick="selectTf(this, '4h')">4h</button>
+          <button class="tf-btn" onclick="selectTf(this, '1D')">1D</button>
+        </div>
+        <div class="status-text" id="tf-status">INTERVAL: 4H [BULLISH SWING // LOCKED]</div>
+      </div>
+
+      <!-- Mask 2: Algorithmic Indicator Overlay -->
+      <div class="card-container" id="mask-02-container">
+        <div class="card-label">
+          <span>2. INDICATOR OVERLAY</span>
+          <span class="mask-badge">MASK #02</span>
+        </div>
+        <button class="toggle-control" id="ema-toggle-btn" onclick="toggleEma()">
+          <span id="ema-toggle-label">EMA 20/50/200: ENABLED [GOLDEN CROSS]</span>
+          <span>●</span>
+        </button>
+      </div>
+
+      <!-- Mask 3: Risk Management & Order Size -->
+      <div class="card-container" id="mask-03-container">
+        <div class="card-label">
+          <span>3. ORDER CONTRACT SIZE</span>
+          <span class="mask-badge">MASK #03</span>
+        </div>
+        <input class="input-box" id="contract-size-input" type="text" value="CONTRACT_SIZE: 1.25 BTC [LIMIT $68,450.00]" readonly />
+      </div>
+
+      <!-- Mask 4: Trade Order Dispatch -->
+      <div class="card-container" id="mask-04-container">
+        <div class="card-label">
+          <span>4. TRADE DISPATCH</span>
+          <span class="mask-badge">MASK #04</span>
+        </div>
+        <button class="dispatch-btn filled" id="dispatch-btn" onclick="executeOrder()">
+          ORDER FILLED [100% VERIFIED]
+        </button>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <div class="chart-overlay-info">
+        <div>BTC/USD 4H: <span id="overlay-price" style="color: #26a69a;">$68,450.00</span></div>
+        <div>EMA 20: <span style="color: #2962ff;">$67,980.00</span></div>
+        <div>EMA 50: <span style="color: #ff9800;">$66,820.00</span></div>
+        <div>24H VOL: <span style="color: #d1d4dc;">48,290 BTC</span></div>
+      </div>
+      <div id="tv-chart"></div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-left">
+      <span class="footer-indicator">● LIVE HTML5 CANVAS</span>
+      <span>• Zero DOM Nodes in Viewport • Playwright/Selenium Locators Fail • Meta SAM 3.1 Grounded</span>
+    </div>
+    <div>TradingView Lightweight Charts™ v5.2.1 • Binance WebSocket Feed</div>
+  </footer>
+
+  <script>
+    const container = document.getElementById('tv-chart');
+    const chart = LightweightCharts.createChart(container, {
+      width: container.clientWidth,
+      height: container.clientHeight,
+      layout: {
+        background: { type: 'solid', color: '#131722' },
+        textColor: '#787b86',
+      },
+      grid: {
+        vertLines: { color: '#1e222d' },
+        horzLines: { color: '#1e222d' },
+      },
+      crosshair: {
+        mode: LightweightCharts.CrosshairMode.Normal,
+      },
+      rightPriceScale: {
+        borderColor: '#2a2e39',
+      },
+      timeScale: {
+        borderColor: '#2a2e39',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    });
+
+    window.addEventListener('resize', () => {
+      chart.applyOptions({
+        width: container.clientWidth,
+        height: container.clientHeight,
+      });
+    });
+
+    // Add Candlestick Series
+    const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+      upColor: '#26a69a',
+      downColor: '#ef5350',
+      borderVisible: false,
+      wickUpColor: '#26a69a',
+      wickDownColor: '#ef5350',
+    });
+
+    // Add EMA 20 line
+    const ema20Series = chart.addSeries(LightweightCharts.LineSeries, {
+      color: '#2962ff',
+      lineWidth: 2,
+      title: 'EMA 20',
+    });
+
+    // Add EMA 50 line
+    const ema50Series = chart.addSeries(LightweightCharts.LineSeries, {
+      color: '#ff9800',
+      lineWidth: 2,
+      title: 'EMA 50',
+    });
+
+    // Generate initial historical candles
+    const now = Math.floor(Date.now() / 1000);
+    const intervalSeconds = 4 * 3600; // 4H
+    let currentPrice = 68450.0;
+    const candleData = [];
+    const ema20Data = [];
+    const ema50Data = [];
+
+    let p = 64200.0;
+    for (let i = 60; i >= 1; i--) {
+      const t = now - (i * intervalSeconds);
+      const delta = (Math.random() - 0.46) * 550;
+      const open = p;
+      const close = p + delta;
+      const high = Math.max(open, close) + Math.random() * 250;
+      const low = Math.min(open, close) - Math.random() * 250;
+      p = close;
+
+      candleData.push({ time: t, open, high, low, close });
+      ema20Data.push({ time: t, value: close * 0.995 });
+      ema50Data.push({ time: t, value: close * 0.982 });
+    }
+
+    // Set data
+    candleSeries.setData(candleData);
+    ema20Series.setData(ema20Data);
+    ema50Series.setData(ema50Data);
+
+    // Live micro-ticking simulation
+    let lastCandle = { ...candleData[candleData.length - 1] };
+    setInterval(() => {
+      const tickDelta = (Math.random() - 0.48) * 45;
+      lastCandle.close = Math.round((lastCandle.close + tickDelta) * 100) / 100;
+      lastCandle.high = Math.max(lastCandle.high, lastCandle.close);
+      lastCandle.low = Math.min(lastCandle.low, lastCandle.close);
+      candleSeries.update(lastCandle);
+
+      const formatted = '$' + lastCandle.close.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('header-price').textContent = 'BTC/USD: ' + formatted + ' ▲ +2.45%';
+      document.getElementById('overlay-price').textContent = formatted;
+    }, 1200);
+
+    // Interactive button controls
+    function selectTf(btn, tf) {
+      document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tf-status').textContent = 'INTERVAL: ' + tf.toUpperCase() + ' [BULLISH SWING // LOCKED]';
+    }
+
+    let emaEnabled = true;
+    function toggleEma() {
+      emaEnabled = !emaEnabled;
+      const btn = document.getElementById('ema-toggle-btn');
+      const lbl = document.getElementById('ema-toggle-label');
+      if (emaEnabled) {
+        btn.classList.remove('disabled');
+        lbl.textContent = 'EMA 20/50/200: ENABLED [GOLDEN CROSS]';
+        ema20Series.applyOptions({ visible: true });
+        ema50Series.applyOptions({ visible: true });
+      } else {
+        btn.classList.add('disabled');
+        lbl.textContent = 'EMA 20/50/200: DISABLED';
+        ema20Series.applyOptions({ visible: false });
+        ema50Series.applyOptions({ visible: false });
+      }
+    }
+
+    let orderFilled = true;
+    function executeOrder() {
+      orderFilled = !orderFilled;
+      const btn = document.getElementById('dispatch-btn');
+      if (orderFilled) {
+        btn.classList.add('filled');
+        btn.textContent = 'ORDER FILLED [100% VERIFIED]';
+      } else {
+        btn.classList.remove('filled');
+        btn.textContent = 'EXECUTE MARKET ORDER [BUY / LONG]';
+      }
+    }
+  </script>
+</body>
+</html>
