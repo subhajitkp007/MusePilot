@@ -49,15 +49,15 @@ const List<SolutionScenario> kSolutionScenarios = [
   ),
   SolutionScenario(
     id: 'canvas_cad',
-    name: 'Northbeam Canvas & CAD',
-    industry: 'Northbeam Studio / WebGL',
-    icon: Icons.palette,
+    name: 'TradingView Terminal',
+    industry: 'TradingView / HTML5 Canvas',
+    icon: Icons.candlestick_chart,
     workflowId: 'w1',
     defaultIntent:
-        'In the Northbeam WebGL workbench, calibrate carrier frequency to 75%, enable adaptive damping loop, lock DSP gain to 0.942, and verify spectral convergence.',
+        'On the TradingView BTC/USD market chart, switch timeframe to 4H, enable the EMA trend indicator, configure order limit, and execute trade order.',
     injectModal: false,
-    businessRoi: 'Drives opaque canvas apps where DOM selectors cannot reach.',
-    highlightBadge: 'Canvas Grounding',
+    businessRoi: 'Drives opaque TradingView canvas charts where Playwright DOM selectors fail.',
+    highlightBadge: 'TradingView Canvas',
     badgeColor: MetaTheme.metaBlueDark,
   ),
   SolutionScenario(

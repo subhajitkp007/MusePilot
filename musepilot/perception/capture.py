@@ -132,13 +132,13 @@ class ScreenCaptureEngine:
         font_pill = _get_font(12, bold=True)
 
         if workflow_id.lower() == "w1":
-            # Northbeam RF Studio brand
-            draw.rounded_rectangle([20, 14, 52, 46], radius=8, fill=(37, 99, 235))
-            draw.text((31, 18), "N", fill=(255, 255, 255), font=font_brand)
-            draw.text((64, 15), "NORTHBEAM STUDIO", fill=(240, 246, 255), font=font_brand)
+            # TradingView Pro Terminal brand
+            draw.rounded_rectangle([20, 14, 52, 46], radius=8, fill=(30, 34, 45))
+            draw.text((28, 17), "TV", fill=(41, 98, 255), font=font_brand)
+            draw.text((64, 15), "TRADINGVIEW PRO // BTC/USD PERPETUAL", fill=(240, 246, 255), font=font_brand)
             draw.text(
                 (64, 34),
-                "Quantum & RF Transmitter Workbench • Opaque Canvas Engine (0 DOM Nodes)",
+                "Institutional Market Terminal • Opaque WebGL & HTML5 Canvas (0 DOM Nodes)",
                 fill=(120, 140, 175),
                 font=font_sub,
             )
@@ -146,12 +146,12 @@ class ScreenCaptureEngine:
             # Navigation pill badges
             draw.rounded_rectangle([860, 16, 990, 44], radius=6, fill=(18, 55, 40))
             draw.ellipse([872, 26, 882, 36], fill=(52, 211, 153))
-            draw.text((890, 22), "STAGING // PROD", fill=(110, 231, 183), font=font_pill)
+            draw.text((890, 22), "BINANCE // LIVE", fill=(110, 231, 183), font=font_pill)
 
             draw.rounded_rectangle([1006, 16, 1250, 44], radius=6, fill=(24, 32, 50))
             draw.text(
                 (1018, 22),
-                f"STATE: {state_label.upper()} • 60 FPS",
+                f"TIMEFRAME: 4H • {state_label.upper()}",
                 fill=(147, 197, 253),
                 font=font_pill,
             )
@@ -181,126 +181,151 @@ class ScreenCaptureEngine:
             )
 
     def _draw_w1_canvas(self, draw: ImageDraw.ImageDraw, state_label: str) -> None:
-        """Draw Workflow 1: Northbeam Studio Quantum & RF Spectrum Workbench."""
+        """Draw Workflow 1: TradingView Institutional Market Terminal & Candlestick Canvas."""
         font_title = _get_font(13, bold=True)
         font_sub = _get_font(11, bold=False)
         font_btn = _get_font(13, bold=True)
         font_mono = _get_font(12, bold=True)
 
-        # Card container 1 (Mask 1: Frequency Synthesizer)
-        draw.rounded_rectangle([100, 120, 540, 235], radius=10, fill=(18, 25, 38), outline=(35, 48, 72), width=1)
-        draw.text((120, 132), "1. CARRIER FREQUENCY SYNTHESIZER", fill=(210, 230, 255), font=font_title)
+        # Card container 1 (Mask 1: Candlestick Timeframe Selector)
+        draw.rounded_rectangle([100, 120, 540, 235], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1)
+        draw.text((120, 132), "1. CANDLESTICK INTERVAL (TIMEFRAME)", fill=(210, 230, 255), font=font_title)
 
         is_calibrated = "step_1" in state_label or "step_2" in state_label or "step_3" in state_label or "final" in state_label
         slider_border = (16, 185, 129) if is_calibrated else (56, 189, 248)
         draw.rectangle([120, 160, 520, 220], fill=(26, 36, 56), outline=slider_border, width=2)
 
-        # Track line & markings
+        # Timeframe interval selector track (15m, 1h, 4h, 1d, 1w)
         draw.line([(150, 190), (490, 190)], fill=(50, 70, 105), width=6)
         draw.line([(150, 182), (150, 198)], fill=(80, 105, 145), width=2)
+        draw.line([(230, 182), (230, 198)], fill=(80, 105, 145), width=2)
         draw.line([(320, 182), (320, 198)], fill=(80, 105, 145), width=2)
         draw.line([(420, 182), (420, 198)], fill=(16, 185, 129) if is_calibrated else (120, 140, 175), width=2)
         draw.line([(490, 182), (490, 198)], fill=(80, 105, 145), width=2)
 
         knob_x = 420 if is_calibrated else 220
-        knob_fill = (16, 185, 129) if is_calibrated else (56, 189, 248)
+        knob_fill = (16, 185, 129) if is_calibrated else (41, 98, 255)
         draw.rounded_rectangle([knob_x - 18, 168, knob_x + 18, 212], radius=6, fill=knob_fill, outline=(255, 255, 255), width=2)
 
-        slider_text = "433.920 MHz [75.0% TARGET LOCKED]" if is_calibrated else "215.400 MHz [FREQUENCY DRIFT]"
+        slider_text = "INTERVAL: 4H [BULLISH SWING // LOCKED]" if is_calibrated else "INTERVAL: 15m [HIGH VOLATILITY DRIFT]"
         slider_txt_color = (167, 243, 208) if is_calibrated else (186, 230, 253)
         draw.text((150, 165), slider_text, fill=slider_txt_color, font=font_mono)
 
-        # Card container 2 (Mask 2: Adaptive Damping Toggle Switch)
-        draw.rounded_rectangle([100, 255, 540, 375], radius=10, fill=(18, 25, 38), outline=(35, 48, 72), width=1)
-        draw.text((120, 267), "2. NYQUIST ADAPTIVE DAMPING LOOP", fill=(210, 230, 255), font=font_title)
+        # Card container 2 (Mask 2: Technical Indicator Toggle)
+        draw.rounded_rectangle([100, 255, 540, 375], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1)
+        draw.text((120, 267), "2. ALGORITHMIC INDICATOR OVERLAY", fill=(210, 230, 255), font=font_title)
 
         damping_on = "step_2" in state_label or "step_3" in state_label or "final" in state_label
         toggle_fill = (16, 185, 129) if damping_on else (35, 46, 68)
         toggle_border = (110, 231, 183) if damping_on else (70, 85, 115)
         draw.rectangle([120, 290, 380, 360], fill=toggle_fill, outline=toggle_border, width=2)
 
-        toggle_label = "ADAPTIVE DAMPING: ENABLED [-48.2 dB]" if damping_on else "ADAPTIVE DAMPING: OFF"
+        toggle_label = "EMA 20/50/200: ENABLED [GOLDEN CROSS]" if damping_on else "EMA 20/50/200: DISABLED"
         draw.text((135, 318), toggle_label, fill=(255, 255, 255) if damping_on else (180, 195, 220), font=font_btn)
 
-        # Card container 3 (Mask 3: Gain Coefficient Parameter Field)
-        draw.rounded_rectangle([100, 395, 540, 510], radius=10, fill=(18, 25, 38), outline=(35, 48, 72), width=1)
-        draw.text((120, 403), "3. DSP ATTENUATION GAIN (α)", fill=(210, 230, 255), font=font_title)
+        # Card container 3 (Mask 3: Order Contract Size)
+        draw.rounded_rectangle([100, 395, 540, 510], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1)
+        draw.text((120, 403), "3. RISK MANAGEMENT & ORDER SIZE", fill=(210, 230, 255), font=font_title)
 
         gain_filled = "step_3" in state_label or "final" in state_label
         gain_border = (6, 182, 212) if gain_filled else (70, 85, 115)
         draw.rectangle([120, 420, 520, 490], fill=(14, 22, 34), outline=gain_border, width=2)
 
-        gain_text = "GAIN_COEFF: 0.942 [LOCKED - IEEE 754]" if gain_filled else "GAIN_COEFF: <enter value>"
+        gain_text = "CONTRACT_SIZE: 1.25 BTC [LIMIT $68,450.00]" if gain_filled else "CONTRACT_SIZE: <enter size>"
         draw.text((140, 448), gain_text, fill=(103, 232, 249) if gain_filled else (120, 140, 175), font=font_mono)
 
-        # Card container 4 (Mask 4: Benchmark Simulation Button)
-        draw.rounded_rectangle([100, 530, 540, 660], radius=10, fill=(18, 25, 38), outline=(35, 48, 72), width=1)
-        draw.text((120, 538), "4. SPECTRAL CONVERGENCE AUDIT", fill=(210, 230, 255), font=font_title)
+        # Card container 4 (Mask 4: Trade Execution Button)
+        draw.rounded_rectangle([100, 530, 540, 660], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1)
+        draw.text((120, 538), "4. TRADE ORDER DISPATCH", fill=(210, 230, 255), font=font_title)
 
         completed = "final" in state_label
-        btn_fill = (16, 185, 129) if completed else (37, 99, 235)
+        btn_fill = (16, 185, 129) if completed else (41, 98, 255)
         btn_border = (110, 231, 183) if completed else (147, 197, 253)
         draw.rectangle([120, 560, 440, 640], fill=btn_fill, outline=btn_border, width=2)
 
-        btn_txt = "BENCHMARK VERIFIED [OK]" if completed else "RUN BENCHMARK SIMULATION"
-        draw.text((145, 592), btn_txt, fill=(255, 255, 255), font=font_btn)
+        btn_txt = "ORDER FILLED [100% VERIFIED]" if completed else "EXECUTE MARKET ORDER [BUY / LONG]"
+        draw.text((135, 592), btn_txt, fill=(255, 255, 255), font=font_btn)
 
-        # Right-hand FFT Spectrum Analyzer Viewport
-        draw.rounded_rectangle([580, 120, 1220, 660], radius=12, fill=(10, 15, 24), outline=(35, 48, 72), width=2)
+        # Right-hand TradingView Candlestick Chart Viewport
+        draw.rounded_rectangle([580, 120, 1220, 660], radius=12, fill=(19, 23, 34), outline=(42, 46, 57), width=2)
 
         # Viewport Header
-        draw.text((610, 142), "REAL-TIME FFT SPECTRUM ANALYZER", fill=(210, 230, 255), font=font_title)
-        status_text = "STATUS: CONVERGED // Q-FACTOR = 99.4%" if completed else f"STATUS: CALIBRATING ({state_label})"
-        status_color = (52, 211, 153) if completed else (251, 191, 36)
-        draw.text((880, 142), status_text, fill=status_color, font=font_mono)
+        draw.text((610, 142), "TRADINGVIEW // BTC/USD · 4H · BINANCE SPOT", fill=(210, 230, 255), font=font_title)
+        price_text = "$68,450.00 (+3.42%)" if completed else "$66,190.00 (-0.84%)"
+        price_color = (52, 211, 153) if completed else (244, 63, 94)
+        draw.text((930, 142), price_text, fill=price_color, font=font_mono)
 
-        # Grid lines & Decibel Y-Axis (-120 dBm to 0 dBm)
-        for i, dbm in enumerate(["0 dBm", "-30 dBm", "-60 dBm", "-90 dBm", "-120 dBm"]):
+        # Price Grid Lines & Y-Axis Scale ($65k to $70k)
+        for i, price_label in enumerate(["$70,000", "$69,000", "$68,000", "$67,000", "$66,000"]):
             gy = 190 + i * 85
-            draw.line([(650, gy), (1180, gy)], fill=(22, 32, 50), width=1)
-            draw.text((605, gy - 6), dbm, fill=(80, 105, 140), font=font_sub)
+            draw.line([(650, gy), (1180, gy)], fill=(30, 34, 45), width=1)
+            draw.text((605, gy - 6), price_label, fill=(120, 140, 175), font=font_sub)
 
-        # Frequency X-Axis markings
-        for i, freq in enumerate(["100M", "200M", "300M", "433.92M", "500M"]):
+        # Time X-Axis Markings
+        for i, t_label in enumerate(["00:00", "04:00", "08:00", "12:00", "16:00"]):
             gx = 680 + i * 115
-            draw.line([(gx, 190), (gx, 530)], fill=(20, 28, 44), width=1)
-            draw.text((gx - 15, 540), freq, fill=(80, 105, 140), font=font_sub)
+            draw.line([(gx, 190), (gx, 530)], fill=(26, 30, 40), width=1)
+            draw.text((gx - 15, 540), t_label, fill=(120, 140, 175), font=font_sub)
 
-        # Render Spectral Waveform Curve
-        points = []
-        for x in range(660, 1180, 4):
-            # Center of carrier is ~433.92M -> pixel 1025
-            dist = abs(x - 1025)
-            if completed:
-                # Sharp high-Q resonant peak
-                h = max(10, int(320 * (1.0 / (1.0 + (dist / 14) ** 2))))
-            else:
-                # Noisy spread spectrum
-                h = max(20, int(140 * (1.0 / (1.0 + (dist / 60) ** 2)))) + (x * 7) % 35
-            points.append((x, 530 - h))
+        # Draw Authentic Japanese Candlesticks across the viewport
+        candles = [
+            (680, 430, 460, 410, 480),
+            (710, 460, 440, 420, 470),
+            (740, 440, 480, 420, 490),
+            (770, 480, 450, 430, 500),
+            (800, 450, 410, 390, 460),
+            (830, 410, 430, 395, 450),
+            (860, 430, 380, 360, 440),
+            (890, 380, 350, 330, 390),
+            (920, 350, 360, 340, 380),
+            (950, 360, 320, 300, 370),
+            (980, 320, 290, 270, 330),
+            (1010, 290, 270, 250, 300),
+            (1040, 270, 280, 255, 295),
+            (1070, 280, 240, 220, 290),
+            (1100, 240, 210, 195, 250),
+        ]
+        for cx, oy, cy, hy, ly in candles:
+            is_bull = cy < oy
+            c_color = (38, 166, 154) if is_bull else (239, 83, 80)
+            # Draw wick
+            draw.line([(cx, hy), (cx, ly)], fill=c_color, width=2)
+            # Draw body
+            top_y = min(oy, cy)
+            bot_y = max(oy, cy)
+            draw.rectangle([cx - 8, top_y, cx + 8, max(top_y + 3, bot_y)], fill=c_color, outline=c_color)
 
-        if len(points) > 1:
-            draw.line(points, fill=(52, 211, 153) if completed else (56, 189, 248), width=3)
+        # Render EMA 20 (Cyan) and EMA 50 (Orange) Curves
+        ema20_points = []
+        ema50_points = []
+        for cx, oy, cy, hy, ly in candles:
+            avg_y = (oy + cy) // 2
+            ema20_points.append((cx, avg_y + 12))
+            ema50_points.append((cx, avg_y + 28))
+
+        if len(ema20_points) > 1:
+            draw.line(ema20_points, fill=(41, 98, 255), width=2)
+            draw.line(ema50_points, fill=(255, 152, 0), width=2)
 
         # Telemetry metrics footer inside viewport
-        draw.rectangle([600, 580, 1200, 640], fill=(14, 20, 32), outline=(30, 42, 64), width=1)
-        thd_val = "-58.4 dBc" if completed else "-24.1 dBc"
-        evm_val = "0.82% [PASS]" if completed else "4.15% [UNSTABLE]"
-        draw.text((620, 602), f"CARRIER: 433.920 MHz   |   THD: {thd_val}   |   PHASE NOISE: -128 dBc/Hz   |   EVM: {evm_val}", fill=(160, 185, 220), font=font_mono)
+        draw.rectangle([600, 580, 1200, 640], fill=(24, 28, 38), outline=(36, 42, 54), width=1)
+        vol_val = "$42.85B" if completed else "$31.20B"
+        rsi_val = "64.2 [BULLISH BIAS]" if completed else "48.1 [NEUTRAL]"
+        draw.text((620, 602), f"PAIR: BTC/USD   |   24H VOL: {vol_val}   |   RSI(14): {rsi_val}   |   EMA 20/50: GOLDEN CROSS [ACTIVE]", fill=(160, 185, 220), font=font_mono)
 
         # PPT-style laser pointer cursor indicating agent interaction inside target control
         from musepilot.perception.som_renderer import draw_ppt_laser_pointer
         if "final" in state_label or "step_4" in state_label:
-            draw_ppt_laser_pointer(draw, cx=280, cy=600, action_label="✦ ACTUATION: BENCHMARK AUDIT", target_detail="Centroid: (280, 600) • Convergence Verified [OK]", laser_color=(16, 185, 129))
+            draw_ppt_laser_pointer(draw, cx=280, cy=600, action_label="✦ ACTUATION: SUBMIT ORDER", target_detail="Centroid: (280, 600) • 1.25 BTC Long Verified [OK]", laser_color=(16, 185, 129))
         elif "step_3" in state_label:
-            draw_ppt_laser_pointer(draw, cx=320, cy=455, action_label="✦ ACTUATION: KEYSTROKE '0.942'", target_detail="Centroid: (320, 455) • 12-bit IEEE 754 Parameter", laser_color=(6, 182, 212))
+            draw_ppt_laser_pointer(draw, cx=320, cy=455, action_label="✦ ACTUATION: KEYSTROKE '1.25 BTC'", target_detail="Centroid: (320, 455) • Limit Order Size Ingest", laser_color=(6, 182, 212))
         elif "step_2" in state_label:
-            draw_ppt_laser_pointer(draw, cx=250, cy=325, action_label="✦ ACTUATION: CLICK TOGGLE", target_detail="Centroid: (250, 325) • Nyquist Damping Enabled", laser_color=(16, 185, 129))
+            draw_ppt_laser_pointer(draw, cx=250, cy=325, action_label="✦ ACTUATION: TOGGLE EMA CROSS", target_detail="Centroid: (250, 325) • Bullish Exponential Cross", laser_color=(16, 185, 129))
         elif "step_1" in state_label:
-            draw_ppt_laser_pointer(draw, cx=320, cy=190, action_label="✦ ACTUATION: DRAG (75% TARGET)", target_detail="Centroid: (320, 190) • Calibrated 433.92 MHz", laser_color=(255, 45, 85))
+            draw_ppt_laser_pointer(draw, cx=320, cy=190, action_label="✦ ACTUATION: SELECT 4H INTERVAL", target_detail="Centroid: (320, 190) • 4-Hour Candlestick Aggregation", laser_color=(255, 45, 85))
         else:
-            # Initial state: laser highlights planned starting control (Frequency Slider)
-            draw_ppt_laser_pointer(draw, cx=320, cy=190, action_label="✦ PLANNED TARGET: MASK #01 [DRAG]", target_detail="Centroid: (320, 190) • Carrier Synthesizer", laser_color=(255, 45, 85))
+            # Initial state: laser highlights planned starting control
+            draw_ppt_laser_pointer(draw, cx=320, cy=190, action_label="✦ PLANNED TARGET: MASK #01 [TIMEFRAME]", target_detail="Centroid: (320, 190) • 4H Interval Selector", laser_color=(255, 45, 85))
 
     def _draw_w2_canvas(self, draw: ImageDraw.ImageDraw, state_label: str) -> None:
         """Draw Workflow 2: CloudOps Observability & Self-Healing Incident Command Center."""
