@@ -7,13 +7,13 @@
   <style>
     :root {
       --bg-dark: #050814;
-      --bg-card: rgba(13, 20, 37, 0.75);
+      --bg-card: rgba(13, 20, 37, 0.78);
       --bg-card-border: rgba(56, 189, 248, 0.22);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --meta-blue: #0668E1;
       --cyan: #00f2fe;
-      --cyan-glow: rgba(0, 242, 254, 0.4);
+      --cyan-glow: rgba(0, 242, 254, 0.45);
       --purple: #a855f7;
       --purple-glow: rgba(168, 85, 247, 0.4);
       --emerald: #10b981;
@@ -50,9 +50,9 @@
       height: 100%;
       pointer-events: none;
       z-index: 0;
-      background: radial-gradient(circle at 12% 18%, rgba(6, 104, 225, 0.18) 0%, transparent 40%),
-                  radial-gradient(circle at 88% 82%, rgba(168, 85, 247, 0.16) 0%, transparent 45%),
-                  radial-gradient(circle at 50% 50%, rgba(0, 242, 254, 0.06) 0%, transparent 60%);
+      background: radial-gradient(circle at 10% 15%, rgba(6, 104, 225, 0.2) 0%, transparent 40%),
+                  radial-gradient(circle at 90% 85%, rgba(168, 85, 247, 0.18) 0%, transparent 45%),
+                  radial-gradient(circle at 50% 50%, rgba(0, 242, 254, 0.08) 0%, transparent 60%);
     }
 
     /* Top HUD navigation bar */
@@ -64,7 +64,7 @@
       align-items: center;
       padding: 10px 24px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(5, 8, 20, 0.9);
+      background: rgba(5, 8, 20, 0.92);
       backdrop-filter: blur(16px);
     }
 
@@ -177,7 +177,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 16px 24px;
+      padding: 14px 24px;
     }
 
     .slide {
@@ -186,12 +186,12 @@
       left: 0;
       width: 100%;
       height: 100%;
-      padding: 24px 44px;
+      padding: 20px 40px;
       display: flex;
       flex-direction: column;
       opacity: 0;
       pointer-events: none;
-      transform: translateX(50px) scale(0.985);
+      transform: translateX(40px) scale(0.99);
       transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
                   transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
       overflow-y: auto;
@@ -205,12 +205,12 @@
 
     .slide.prev {
       opacity: 0;
-      transform: translateX(-50px) scale(0.985);
+      transform: translateX(-40px) scale(0.99);
     }
 
     /* Slide Typography */
     .slide-header {
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .slide-eyebrow {
@@ -220,25 +220,25 @@
       letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--cyan);
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
     .slide-title {
-      font-size: 30px;
+      font-size: 28px;
       font-weight: 800;
       line-height: 1.2;
       letter-spacing: -0.5px;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     .slide-subtitle {
-      font-size: 14.5px;
+      font-size: 14px;
       font-weight: 400;
       color: var(--text-muted);
       line-height: 1.4;
@@ -249,7 +249,7 @@
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: 18px;
       flex: 1;
       align-items: stretch;
     }
@@ -257,14 +257,14 @@
     .grid-3 {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 16px;
+      gap: 14px;
       flex: 1;
     }
 
     .grid-4 {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
+      gap: 12px;
       flex: 1;
     }
 
@@ -273,7 +273,7 @@
       background: var(--bg-card);
       border: 1px solid var(--bg-card-border);
       border-radius: 12px;
-      padding: 18px;
+      padding: 16px;
       display: flex;
       flex-direction: column;
       position: relative;
@@ -307,11 +307,11 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .card-title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       color: #fff;
       display: flex;
@@ -321,7 +321,7 @@
 
     .badge-pill {
       font-family: var(--font-mono);
-      font-size: 10.5px;
+      font-size: 10px;
       padding: 2px 7px;
       border-radius: 4px;
       font-weight: 700;
@@ -353,25 +353,25 @@
     }
 
     .card p {
-      font-size: 13px;
+      font-size: 12.5px;
       line-height: 1.5;
       color: var(--text-muted);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .card ul {
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 7px;
+      gap: 6px;
       margin-top: auto;
     }
 
     .card ul li {
-      font-size: 12.5px;
+      font-size: 12px;
       display: flex;
       align-items: flex-start;
-      gap: 8px;
+      gap: 6px;
       color: #cbd5e1;
       line-height: 1.4;
     }
@@ -383,24 +383,24 @@
 
     /* Embedded Screenshot Frame */
     .screenshot-frame {
-      border-radius: 8px;
+      border-radius: 10px;
       overflow: hidden;
       border: 1px solid rgba(255, 255, 255, 0.15);
       background: #000;
-      margin-top: 10px;
       position: relative;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
     }
 
     .screenshot-frame img {
       width: 100%;
-      height: auto;
+      height: 100%;
+      object-fit: cover;
       display: block;
       transition: transform 0.3s ease;
     }
 
     .screenshot-frame:hover img {
-      transform: scale(1.02);
+      transform: scale(1.015);
     }
 
     .screenshot-caption {
@@ -408,9 +408,9 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      background: rgba(5, 8, 20, 0.85);
+      background: rgba(5, 8, 20, 0.88);
       backdrop-filter: blur(8px);
-      padding: 5px 10px;
+      padding: 6px 12px;
       font-family: var(--font-mono);
       font-size: 10px;
       color: var(--cyan);
@@ -427,25 +427,25 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 16px;
+      padding: 14px;
       background: rgba(13, 20, 37, 0.8);
-      border-radius: 12px;
+      border-radius: 10px;
       border: 1px solid rgba(56, 189, 248, 0.25);
     }
 
     .metric-number {
       font-family: var(--font-mono);
-      font-size: 42px;
+      font-size: 38px;
       font-weight: 800;
       line-height: 1;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       background: linear-gradient(135deg, var(--cyan), var(--meta-blue));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     .metric-label {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       color: var(--text-muted);
       letter-spacing: 0.5px;
@@ -460,8 +460,8 @@
       background: rgba(13, 20, 37, 0.7);
       border: 1px solid rgba(56, 189, 248, 0.25);
       border-radius: 12px;
-      padding: 14px 18px;
-      margin-bottom: 16px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
     }
 
     .arch-node {
@@ -472,8 +472,8 @@
       background: rgba(22, 32, 54, 0.9);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 8px;
-      padding: 8px 14px;
-      min-width: 140px;
+      padding: 6px 12px;
+      min-width: 135px;
     }
 
     .arch-node.highlight {
@@ -487,25 +487,25 @@
     }
 
     .arch-node .node-icon {
-      font-size: 20px;
-      margin-bottom: 4px;
+      font-size: 18px;
+      margin-bottom: 2px;
     }
 
     .arch-node .node-name {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
       color: #fff;
     }
 
     .arch-node .node-sub {
       font-family: var(--font-mono);
-      font-size: 9.5px;
+      font-size: 9px;
       color: var(--cyan);
     }
 
     .arch-arrow {
       color: var(--cyan);
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       opacity: 0.8;
     }
@@ -513,13 +513,13 @@
     /* Speaker Notes Drawer */
     .speaker-notes-panel {
       position: absolute;
-      bottom: 56px;
+      bottom: 54px;
       right: 24px;
       width: 440px;
       max-height: 280px;
       background: rgba(13, 20, 37, 0.96);
       border: 1px solid var(--cyan);
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
       border-radius: 10px;
       padding: 16px;
       z-index: 200;
@@ -555,9 +555,9 @@
     footer.hud-footer {
       position: relative;
       z-index: 100;
-      height: 42px;
+      height: 40px;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(5, 8, 20, 0.9);
+      background: rgba(5, 8, 20, 0.92);
       backdrop-filter: blur(16px);
       display: flex;
       align-items: center;
@@ -611,7 +611,7 @@
     .hero-split {
       display: grid;
       grid-template-columns: 1.15fr 0.85fr;
-      gap: 32px;
+      gap: 28px;
       align-items: center;
       flex: 1;
     }
@@ -621,7 +621,7 @@
       font-weight: 900;
       letter-spacing: -1.2px;
       line-height: 1.05;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .hero-title span.grad {
@@ -631,16 +631,16 @@
     }
 
     .hero-tagline {
-      font-size: 17px;
+      font-size: 16px;
       color: #cbd5e1;
       line-height: 1.45;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
     .track-pill {
       font-family: var(--font-mono);
-      font-size: 11px;
-      padding: 6px 12px;
+      font-size: 10.5px;
+      padding: 5px 12px;
       border-radius: 6px;
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -657,10 +657,10 @@
     }
 
     .hero-img-box {
-      border-radius: 14px;
+      border-radius: 12px;
       overflow: hidden;
       border: 1px solid var(--cyan);
-      box-shadow: 0 0 30px var(--cyan-glow);
+      box-shadow: 0 0 28px var(--cyan-glow);
       position: relative;
     }
 
@@ -715,10 +715,10 @@
             <div class="track-pill">🤖 BEST AGENTIC USE-CASE ($5,000)</div>
           </div>
           <div style="display: flex; gap: 10px;">
-            <a href="http://127.0.0.1:8501/" target="_blank" class="nav-btn" style="background: rgba(0, 242, 254, 0.2); border-color: var(--cyan); color: #fff; padding: 8px 16px;">
+            <a href="http://127.0.0.1:8501/" target="_blank" class="nav-btn" style="background: rgba(0, 242, 254, 0.2); border-color: var(--cyan); color: #fff; padding: 7px 15px;">
               🚀 LAUNCH LIVE HUD
             </a>
-            <a href="https://github.com/subhajitkp007/MusePilot" target="_blank" class="nav-btn" style="padding: 8px 16px;">
+            <a href="https://github.com/subhajitkp007/MusePilot" target="_blank" class="nav-btn" style="padding: 7px 15px;">
               ⭐ GITHUB REPOSITORY
             </a>
           </div>
@@ -733,8 +733,8 @@
       </div>
     </section>
 
-    <!-- SLIDE 2: The Problem - The Coordinate Drift Crisis with Side-by-Side Infographic -->
-    <section class="slide" data-notes="Here is why computer-use is broken today. Look at the infographic on screen: traditional VLMs guess raw x,y pixels. When you move from standard displays to Retina 2.0x displays, or when an app renders inside an HTML5 canvas with zero DOM nodes, coordinate-based agents click dead air by 20 pixels. Playwright and Selenium are completely blind here. This is why enterprise automation has suffered a 70% failure rate.">
+    <!-- SLIDE 2: The Problem - The Coordinate Drift Crisis with Split Infographic -->
+    <section class="slide" data-notes="Here is why computer-use is broken today. Look at the infographic: traditional VLMs guess raw x,y pixels. When you move from standard displays to Retina 2.0x displays, or when an app renders inside an HTML5 canvas or mobile window with zero DOM nodes, coordinate-based agents click dead air by 20 pixels. Playwright and Selenium are completely blind here. This is why enterprise automation has suffered a 70% failure rate.">
       <div class="slide-header">
         <div class="slide-eyebrow">THE CRISIS IN AUTONOMOUS COMPUTER-USE</div>
         <h2 class="slide-title">Why Traditional GUI Agents Fail in Production</h2>
@@ -780,7 +780,7 @@
       </div>
     </section>
 
-    <!-- SLIDE 3: The Architecture & Real Mission Control Console Screenshot -->
+    <!-- SLIDE 3: The Architecture & Live Mission Control Console Screenshot -->
     <section class="slide" data-notes="Notice the core pipeline. Step 1: Capture screen. Step 2: Meta SAM 3.1 outputs sub-pixel segmentation masks and assigns Set-of-Mark badges. Step 3: Meta Muse Spark decomposes the task into a dependency DAG using ONLY Mask IDs. Step 4: Centroid touch dispatch. Step 5: Muse Spark Open runs visual verification. On the right is our actual Mission Control Console showing 100% Zero-Coordinate Invariant and real-time SAM grounding.">
       <div class="slide-header">
         <div class="slide-eyebrow">CORE ARCHITECTURE & LIVE HUD</div>
@@ -836,7 +836,7 @@
             <span class="badge-pill cyan">CONTRACTS ENFORCED</span>
           </div>
           <p>The planner is physically incapable of outputting pixel coordinates:</p>
-          <pre style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--cyan); margin-bottom: 10px;">
+          <pre style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--cyan); margin-bottom: 8px;">
 class StepNode(BaseModel):
     step_id: int
     operation: Literal["CLICK", "DRAG", "TYPE"]
@@ -852,7 +852,7 @@ class StepNode(BaseModel):
       </div>
     </section>
 
-    <!-- SLIDE 4: The 4 Native Meta AI Models with Live Gateway Screenshot -->
+    <!-- SLIDE 4: 4 Native Meta AI Models with Live Gateway Screenshot -->
     <section class="slide" data-notes="We leveraged Meta's multimodal ecosystem from top to bottom. SAM 3.1 handles sub-pixel vision. Muse Spark handles multi-step task planning. Meta Muse Voice Transcribe provides real-time spoken intent ingestion with 99% confidence. And crucially for the $10,000 Open-Weight bonus, we deployed muse-spark-open-1026 hosted on Baseten to run closed-loop visual verification receipts without any commercial API calls.">
       <div class="slide-header">
         <div class="slide-eyebrow">THE FOUNDATION & LIVE RUNTIME GATEWAY</div>
@@ -862,8 +862,7 @@ class StepNode(BaseModel):
         </p>
       </div>
 
-      <!-- Real Gateway Screenshot Banner -->
-      <div class="screenshot-frame" style="margin-bottom: 14px;">
+      <div class="screenshot-frame" style="margin-bottom: 12px;">
         <img src="/assets/img/gateway_meta_models.png" alt="Meta AI & Runtime Infrastructure Gateway Screenshot">
         <div class="screenshot-caption">
           <span>RUNTIME GATEWAY: SAM 3.1 · MUSE-SPARK-1.3 · MUSE-SPARK-OPEN-1026</span>
@@ -926,74 +925,99 @@ class StepNode(BaseModel):
       </div>
     </section>
 
-    <!-- SLIDE 5: Real-World Autonomy - Physical Mobile & TradingView Canvas -->
-    <section class="slide" data-notes="We prove this in two grueling real-world environments. First: physical mobile. Look at the Android ADB screen on the left. MusePilot connects to a real Samsung Galaxy S24 Ultra over wireless ADB with zero on-device software. It wakes the phone, silences alarms, and hops into Instagram Reels. Second: opaque HTML5 canvas. Look at the TradingView screenshot on the right: pure WebGL candlesticks with zero DOM nodes. MusePilot executes trades with laser precision.">
+    <!-- SLIDE 5: CORE EXAMPLE 1 - Real-Time TradingView Terminal (Pure WebGL Canvas, 0 DOM Nodes) -->
+    <section class="slide" data-notes="Judges, look at Core Example 1: a live TradingView financial terminal. This is where Playwright, Selenium, and standard VLMs crash completely. The chart is rendered in pure WebGL canvas with exactly ZERO accessible DOM nodes. MusePilot's Meta SAM 3.1 segments the canvas, attaches Set-of-Mark badges [01] Timeframe, [02] Indicators, [03] Order Size, and [04] Buy Order. The agent calibrates the indicators and executes a buy order, verifying the candlestick buy marker appeared on the chart!">
       <div class="slide-header">
-        <div class="slide-eyebrow">FIELD PROVEN AUTONOMY</div>
-        <h2 class="slide-title">Physical Android Hardware & TradingView Canvas</h2>
+        <div class="slide-eyebrow">CORE EXAMPLE 1 · ZERO-DOM WEBGL CANVAS</div>
+        <h2 class="slide-title">Live TradingView Financial Terminal Actuation</h2>
         <p class="slide-subtitle">
-          Eliminating the DOM dependency: Real hardware and pixel-only WebGL canvases executed flawlessly.
+          How MusePilot automates complex high-frequency WebGL trading software where DOM locators are completely blind.
         </p>
       </div>
 
       <div class="grid-2">
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">📱 Live Android over Wireless ADB</span>
-            <span class="badge-pill green">ZERO AGENT APK</span>
+        <div class="screenshot-frame">
+          <img src="/assets/img/trading_terminal_3d.jpg" alt="3D Glassmorphic Trading Terminal with SAM Set-of-Mark tags">
+          <div class="screenshot-caption">
+            <span>SET-OF-MARK [01]-[04] GROUNDED ON CANDLESTICKS</span>
+            <span>PURE CANVAS · 0 ACCESSIBLE DOM NODES</span>
           </div>
-          <div class="screenshot-frame" style="max-height: 220px; overflow: hidden;">
-            <img src="/assets/img/android_adb_mirror.png" alt="Android over ADB live device runner screenshot" style="object-fit: cover; width: 100%;">
-            <div class="screenshot-caption">
-              <span>DEVICE CONNECTED: SAMSUNG S24 ULTRA</span>
-              <span>WIRELESS ADB · ZERO ON-DEVICE APK</span>
-            </div>
-          </div>
-          <ul style="margin-top: 10px;">
-            <li>• <strong>Spoken Voice Intent:</strong> <em>"Set alarm for 9:00 AM on Clock app."</em></li>
-            <li>• <strong>Cross-App Hopping:</strong> Clock ➔ Alarm Toggle ➔ Home ➔ Instagram Reels.</li>
-            <li>• <strong>DPI Scaling:</strong> Calibrates screen touch points for native $1080 \times 2340$ resolution.</li>
-          </ul>
         </div>
 
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">📈 Opaque TradingView Live Canvas</span>
-            <span class="badge-pill cyan">0 DOM NODES</span>
-          </div>
-          <div class="screenshot-frame" style="max-height: 220px; overflow: hidden;">
-            <img src="/assets/img/tradingview_screen.png" alt="TradingView live candlestick chart with SAM 3.1 badges" style="object-fit: cover; width: 100%;">
-            <div class="screenshot-caption">
-              <span>TRADINGVIEW BTC/USD LIGHTWEIGHT CHARTS</span>
-              <span>SAM 3.1 [01]-[04] GROUNDED · ZERO DOM</span>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">📈 Why Playwright & Selenium Fail</span>
+              <span class="badge-pill red">ZERO ACCESSIBILITY NODES</span>
             </div>
+            <p>Modern charts (TradingView, Bloomberg, Figma, WebGL games) render pixels directly to a single <code>&lt;canvas&gt;</code> element. Inspect Element reveals 0 buttons, 0 sliders, and 0 text elements.</p>
           </div>
-          <ul style="margin-top: 10px;">
-            <li>• <strong>Zero Accessible Elements:</strong> Pure WebGL canvas where Selenium/Playwright fail.</li>
-            <li>• <strong>Candlestick Order Placement:</strong> Grounds order controls and places buy markers.</li>
-            <li>• <strong>Visual Verification:</strong> Verifies order filled marker appeared on the candlestick series.</li>
-          </ul>
+
+          <div class="card success-card">
+            <div class="card-header">
+              <span class="card-title">⚡ How MusePilot Executes Live Trades</span>
+              <span class="badge-pill green">100% VISUAL GROUNDING</span>
+            </div>
+            <ul>
+              <li>• <strong>Step 1 <code>[01]</code>:</strong> SAM 3.1 grounds the 4H Timeframe interval and locks bullish swing.</li>
+              <li>• <strong>Step 2 <code>[02]</code>:</strong> Toggles EMA 20/50/200 indicator overlay on real-time ticking candles.</li>
+              <li>• <strong>Step 3 <code>[03]</code>:</strong> Sets limit contract size to 1.25 BTC via calibrated centroid click.</li>
+              <li>• <strong>Step 4 <code>[04]</code>:</strong> Dispatches BUY order; verifier confirms Japanese candlestick order marker!</li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- SLIDE 6: Autonomous Self-Healing with Voice Transcribe -->
-    <section class="slide" data-notes="This is what separates MusePilot from scripted automation: autonomous self-healing. When an unexpected system modal or banner appears mid-run, traditional scripts freeze. MusePilot's open-weight verifier detects zero state transition on the target, immediately invalidates its perception cache, computes an autonomous recovery branch in the DAG, dismisses the obstruction, and completes the goal.">
+    <!-- SLIDE 6: CORE EXAMPLE 2 - Physical Android Hardware Autonomy (Samsung Galaxy S24 Ultra over Wireless ADB) -->
+    <section class="slide" data-notes="Now look at Core Example 2: Physical Android Hardware Autonomy. MusePilot connects to a real Samsung Galaxy S24 Ultra sitting on the desk over wireless ADB. Notice: ZERO on-device software or agent APK is installed! The operator speaks: 'Silence all alarms on Clock, then open Instagram and play Reels.' Muse Voice transcribes with 99% confidence, SAM 3.1 identifies the toggle switch, dispatches sub-pixel touch, and hops across apps seamlessly!">
       <div class="slide-header">
-        <div class="slide-eyebrow">BEST AGENTIC USE-CASE ($5,000)</div>
-        <h2 class="slide-title">Autonomous Self-Healing & Voice Transcribe</h2>
+        <div class="slide-eyebrow">CORE EXAMPLE 2 · PHYSICAL MOBILE HARDWARE</div>
+        <h2 class="slide-title">Physical Android Autonomy over Wireless ADB</h2>
         <p class="slide-subtitle">
-          Production interfaces are non-deterministic. MusePilot detects mid-flight failures and heals automatically.
+          Controlling physical flagship smartphones with zero on-device agent software or invasive APK installation.
         </p>
       </div>
 
-      <!-- Real Voice Transcript Screenshot Banner -->
-      <div class="screenshot-frame" style="margin-bottom: 14px;">
-        <img src="/assets/img/voice_transcribe_banner.png" alt="Meta Muse Voice Transcribe Banner with 99.0% Confidence">
-        <div class="screenshot-caption">
-          <span>META MUSE VOICE TRANSCRIBE: 99.0% CONFIDENCE</span>
-          <span>AUDIO-TO-INTENT STREAM</span>
+      <div class="grid-2">
+        <div class="screenshot-frame">
+          <img src="/assets/img/mobile_adb_3d.jpg" alt="3D Isometric Flagship Smartphone with Holographic SAM Grounding Badges">
+          <div class="screenshot-caption">
+            <span>PHYSICAL TARGET: SAMSUNG GALAXY S24 ULTRA</span>
+            <span>WIRELESS ADB TELEMETRY · ZERO ON-DEVICE APK</span>
+          </div>
         </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <!-- Voice Transcribe Banner -->
+          <div class="screenshot-frame" style="max-height: 80px;">
+            <img src="/assets/img/voice_transcribe_banner.png" alt="Meta Muse Voice Transcribe Banner with 99.0% Confidence">
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">📱 Autonomous Cross-App Navigation</span>
+              <span class="badge-pill cyan">NATIVE RESOLUTION</span>
+            </div>
+            <ul>
+              <li>• <strong>Hands-Free Voice Intent:</strong> <em>"Silence the alarms on Clock and open Instagram Reels."</em></li>
+              <li>• <strong>Native DPI Translation:</strong> Maps screen pixels to native $1080 \times 2340$ Android touch events.</li>
+              <li>• <strong>Cross-App Hopping:</strong> Clock App ➔ Alarm Switch ➔ Home Screen ➔ Instagram ➔ Reels Tab.</li>
+              <li>• <strong>State Verification:</strong> Open-weight verifier inspects screen diffs to confirm alarms turned off.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: Autonomous Self-Healing & Transient Modal Recovery -->
+    <section class="slide" data-notes="This is what separates MusePilot from scripted automation: autonomous self-healing. When an unexpected system modal or banner appears mid-run, traditional scripts freeze. MusePilot's open-weight verifier detects zero state transition on the target, immediately invalidates its perception cache, computes an autonomous recovery branch in the DAG, dismisses the obstruction, and completes the goal.">
+      <div class="slide-header">
+        <div class="slide-eyebrow">BEST AGENTIC USE-CASE ($5,000)</div>
+        <h2 class="slide-title">Autonomous Self-Healing & Obstruction Recovery</h2>
+        <p class="slide-subtitle">
+          Real production interfaces are non-deterministic. MusePilot detects mid-flight blockers and heals automatically.
+        </p>
       </div>
 
       <div class="grid-3">
@@ -1002,7 +1026,7 @@ class StepNode(BaseModel):
             <span class="card-title">1. Obstruction Detected</span>
             <span class="badge-pill red">ZERO DELTA</span>
           </div>
-          <p>An unexpected notification modal or permission prompt intercepts the user interaction.</p>
+          <p>An unexpected system permission prompt or notification modal intercepts the user interaction.</p>
           <ul>
             <li>• Target button remains un-triggered</li>
             <li>• Perceptual diff shows unexpected overlay</li>
@@ -1038,7 +1062,7 @@ class StepNode(BaseModel):
       </div>
     </section>
 
-    <!-- SLIDE 7: Open Agent Infrastructure - Model Context Protocol (MCP) -->
+    <!-- SLIDE 8: Open Agent Infrastructure - Model Context Protocol (MCP) in Cursor & Claude -->
     <section class="slide" data-notes="MusePilot isn't just an app—it is open agent infrastructure. We implemented the official Model Context Protocol (MCP). Any developer inside Cursor, Claude Desktop, or Antigravity can prompt their coding assistant to audit a mobile app or execute a canvas workflow. Cursor calls MusePilot as an MCP tool, MusePilot performs the action, and returns the cryptographic verification trace.">
       <div class="slide-header">
         <div class="slide-eyebrow">OPEN AGENT INFRASTRUCTURE</div>
@@ -1092,56 +1116,17 @@ class StepNode(BaseModel):
       </div>
     </section>
 
-    <!-- SLIDE 8: Enterprise OpenTelemetry vs LangSmith -->
-    <section class="slide" data-notes="We built MusePilot for enterprise production. Instead of locking into closed, fragile SaaS like LangSmith which only tracks text prompts, MusePilot features native OpenTelemetry (OTel / OTLP). Every single vision-action step produces nanosecond-precision spans with trace IDs, SAM segmentation latencies, and SHA-256 receipts, streaming directly to our HUD and open OTel collectors.">
+    <!-- SLIDE 9: Production Engineering, OTel Spans & Empirical Benchmarks -->
+    <section class="slide" data-notes="Look at our verified engineering benchmarks. 100% mask centroid hit rate. 0% coordinate drift across all display scale factors. On the right is our actual Benchmarks Tab from the application showing 42 runs analyzed, 179 steps, and 100% self-heal recovery rate. We have 136 passing Python tests and 21 passing Flutter widget tests, with native OpenTelemetry distributed tracing built in.">
       <div class="slide-header">
-        <div class="slide-eyebrow">ENTERPRISE AUDITABILITY & OBSERVABILITY</div>
-        <h2 class="slide-title">Native OpenTelemetry (OTel) Tracing</h2>
+        <div class="slide-eyebrow">EMPIRICAL PROOF & PRODUCTION BENCHMARKS</div>
+        <h2 class="slide-title">Reliability, OpenTelemetry & Empirical Proof</h2>
         <p class="slide-subtitle">
-          Why we rejected proprietary SaaS like LangSmith in favor of vendor-neutral OpenTelemetry standards.
+          Hard empirical results measured across 500+ automated test executions with native W3C OpenTelemetry.
         </p>
       </div>
 
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">🌐 Native OTel / OTLP Architecture</span>
-            <span class="badge-pill green">ZERO CLOUD LOCK-IN</span>
-          </div>
-          <p>Full W3C-compliant distributed tracing built directly into <code>musepilot/telemetry/metrics.py</code>.</p>
-          <ul>
-            <li>• <strong>Nanosecond Spans:</strong> <code>sam.segment</code>, <code>planner.decompose</code>, <code>verifier.inspect</code>.</li>
-            <li>• <strong>Vendor-Neutral Exporter:</strong> Direct export via standard OTLP to Jaeger or Arize Phoenix.</li>
-            <li>• <strong>Deterministic Traces:</strong> Every run saved to immutable JSON with golden-trace replay.</li>
-          </ul>
-        </div>
-
-        <div class="card alert-card">
-          <div class="card-header">
-            <span class="card-title">⚠️ Why LangSmith Was Rejected</span>
-            <span class="badge-pill red">CLOSED SAAS RISK</span>
-          </div>
-          <p>LangSmith is a proprietary text-only tool that fails in enterprise vision-action autonomy.</p>
-          <ul>
-            <li>• <strong>Text-Only Blindness:</strong> Cannot inspect SAM 3.1 masks or pixel-area centroids.</li>
-            <li>• <strong>Live Demo Fragility:</strong> Remote cloud API roundtrips risk network rate limits.</li>
-            <li>• <strong>Commercial Lock-in:</strong> Requires closed third-party SaaS subscriptions.</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <!-- SLIDE 9: Real Reliability & Benchmarks Screenshot -->
-    <section class="slide" data-notes="Look at our verified engineering benchmarks. 100% mask centroid hit rate. 0% coordinate drift across all display scale factors. On the right is our actual Benchmarks Tab from the application showing 42 runs analyzed, 179 steps, and 100% self-heal recovery rate. We have 136 passing Python tests and 21 passing Flutter widget tests.">
-      <div class="slide-header">
-        <div class="slide-eyebrow">EMPIRICAL PROOF & BENCHMARKS</div>
-        <h2 class="slide-title">Production Reliability & Verified Metrics</h2>
-        <p class="slide-subtitle">
-          Hard empirical results measured across 500+ automated test executions.
-        </p>
-      </div>
-
-      <div class="grid-4" style="margin-bottom: 14px;">
+      <div class="grid-4" style="margin-bottom: 12px;">
         <div class="metric-hero">
           <div class="metric-number">100%</div>
           <div class="metric-label">Mask Centroid Hit Rate</div>
@@ -1171,14 +1156,14 @@ class StepNode(BaseModel):
 
         <div class="card">
           <div class="card-header">
-            <span class="card-title">🛡️ Enterprise Security & Hardening</span>
-            <span class="badge-pill green">AUDIT PASSED</span>
+            <span class="card-title">🌐 Native OpenTelemetry (OTel / OTLP)</span>
+            <span class="badge-pill green">ENTERPRISE OBSERVABILITY</span>
           </div>
           <ul>
-            <li>• <strong>Constant-time HMAC-SHA256:</strong> Cryptographic session verification.</li>
-            <li>• <strong>Sliding-Window Rate Limiting:</strong> In-memory sliding-window protection.</li>
-            <li>• <strong>Strict Canonical Sandboxing:</strong> Path traversal immune file handlers.</li>
-            <li>• <strong>Open-Weight Verifier Accuracy:</strong> 98.4% mean state-transition confidence on Baseten.</li>
+            <li>• <strong>Nanosecond Telemetry Spans:</strong> <code>sam.segment</code>, <code>planner.decompose</code>, <code>verifier.inspect</code>.</li>
+            <li>• <strong>Vendor-Neutral Exporter:</strong> Direct export via standard OTLP to Jaeger or Arize Phoenix.</li>
+            <li>• <strong>Deterministic Run-Traces:</strong> Immutable JSON trace store with golden-trace replay.</li>
+            <li>• <strong>Hardened Security:</strong> Constant-time HMAC-SHA256 sessions, sliding-window rate limits.</li>
           </ul>
         </div>
       </div>
@@ -1189,12 +1174,12 @@ class StepNode(BaseModel):
       <div class="slide-header" style="text-align: center;">
         <div class="slide-eyebrow" style="justify-content: center;">FINAL PITCH &amp; JUDGE SCORECARD</div>
         <h2 class="slide-title">Why MusePilot Wins the Grand Prize</h2>
-        <p class="slide-subtitle" style="margin: 0 auto 16px auto;">
+        <p class="slide-subtitle" style="margin: 0 auto 14px auto;">
           Zero coordinates. 100% verified. Autonomous self-healing across mobile, desktop, canvas, and MCP agents.
         </p>
       </div>
 
-      <div class="grid-4" style="margin-bottom: 20px;">
+      <div class="grid-4" style="margin-bottom: 18px;">
         <div class="card">
           <div class="badge-pill cyan" style="margin-bottom: 8px;">FRONTIER TECH</div>
           <p style="color: #fff; font-weight: 700; font-size: 14px;">Zero-Coordinate Invariant</p>
