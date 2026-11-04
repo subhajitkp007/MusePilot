@@ -31,6 +31,8 @@
       padding: 0 16px;
       font-size: 13px;
       user-select: none;
+      position: relative;
+      z-index: 20;
     }
     .brand-section {
       display: flex;
@@ -92,6 +94,24 @@
       font-size: 13px;
       color: #26a69a;
     }
+    .action-btn {
+      background: #2962ff;
+      color: #fff;
+      border: 1px solid #60a5fa;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+    .action-btn:hover {
+      background: #1d4ed8;
+      box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
+    }
     .open-external-btn {
       background: #2a2e39;
       color: #93c5fd;
@@ -116,9 +136,10 @@
       flex: 1;
       height: calc(100vh - 76px);
       overflow: hidden;
+      position: relative;
     }
     .control-panel {
-      width: 320px;
+      width: 330px;
       background: #161a25;
       border-right: 1px solid #2a2e39;
       display: flex;
@@ -126,6 +147,8 @@
       gap: 12px;
       padding: 14px;
       overflow-y: auto;
+      position: relative;
+      z-index: 10;
     }
     .card-container {
       background: #1e222d;
@@ -135,6 +158,12 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      position: relative;
+      transition: border-color 0.3s;
+    }
+    .card-container.target-active {
+      border-color: #ff2d55;
+      box-shadow: 0 0 12px rgba(255, 45, 85, 0.3);
     }
     .card-label {
       font-size: 11px;
@@ -144,6 +173,7 @@
       letter-spacing: 0.5px;
       display: flex;
       justify-content: space-between;
+      align-items: center;
     }
     .mask-badge {
       font-size: 9px;
@@ -168,21 +198,23 @@
       border-radius: 4px;
       cursor: pointer;
       text-align: center;
-      transition: all 0.15s;
+      transition: all 0.2s;
     }
     .tf-btn.active {
       background: #10b981;
       border-color: #34d399;
       color: #fff;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
     }
     .status-text {
       font-size: 11px;
       font-family: 'SF Mono', Consolas, monospace;
       color: #6ee7b7;
       background: rgba(16, 185, 129, 0.1);
-      padding: 4px 8px;
+      padding: 5px 8px;
       border-radius: 4px;
       border-left: 2px solid #10b981;
+      transition: all 0.2s;
     }
     .toggle-control {
       background: #10b981;
@@ -215,6 +247,7 @@
       padding: 8px 10px;
       outline: none;
       width: 100%;
+      transition: all 0.2s;
     }
     .dispatch-btn {
       background: #2962ff;
@@ -226,13 +259,13 @@
       border-radius: 6px;
       cursor: pointer;
       text-align: center;
-      transition: all 0.2s;
+      transition: all 0.3s;
       letter-spacing: 0.5px;
     }
     .dispatch-btn.filled {
       background: #10b981;
       border-color: #6ee7b7;
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.5);
     }
     .chart-container {
       flex: 1;
@@ -261,6 +294,84 @@
     .chart-overlay-info span {
       font-family: 'SF Mono', Consolas, monospace;
     }
+    /* Dynamic PPT Laser Pointer overlay */
+    #ppt-laser-pointer {
+      position: absolute;
+      z-index: 100;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      display: none;
+    }
+    .laser-bullseye {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #ff2d55;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px #ff2d55, inset 0 0 8px #ff2d55;
+      animation: laserPulse 1s infinite alternate;
+    }
+    .laser-center-dot {
+      width: 6px;
+      height: 6px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 6px #fff;
+    }
+    .laser-tag {
+      position: absolute;
+      left: 32px;
+      top: -6px;
+      background: rgba(30, 21, 40, 0.95);
+      border: 1px solid #ff2d55;
+      color: #ff8099;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+    @keyframes laserPulse {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      100% { transform: scale(1.15); opacity: 1; }
+    }
+
+    /* Execution Trade Confirmation Modal */
+    #trade-receipt-banner {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(18, 55, 40, 0.95);
+      border: 1px solid #10b981;
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+      padding: 12px 16px;
+      border-radius: 8px;
+      z-index: 50;
+      display: none;
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .receipt-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #6ee7b7;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .receipt-body {
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 11px;
+      color: #d1d4dc;
+    }
     footer {
       background: #161a25;
       border-top: 1px solid #2a2e39;
@@ -271,6 +382,8 @@
       padding: 0 16px;
       font-size: 11px;
       color: #787b86;
+      position: relative;
+      z-index: 20;
     }
     .footer-left {
       display: flex;
@@ -293,6 +406,9 @@
       </div>
     </div>
     <div class="header-badges">
+      <button class="action-btn" id="auto-run-btn" onclick="autoRunDemo()">
+        <span>⚡ AUTO-RUN TRADING FLOW</span>
+      </button>
       <div class="live-feed-pill">
         <div class="pulse-dot"></div>
         <span>BINANCE // LIVE FEED</span>
@@ -305,24 +421,43 @@
   </header>
 
   <div class="main-workspace">
+    <!-- Dynamic PPT Laser Pointer overlay -->
+    <div id="ppt-laser-pointer">
+      <div class="laser-bullseye">
+        <div class="laser-center-dot"></div>
+      </div>
+      <div class="laser-tag" id="laser-label">✦ ACTUATION: CLICK MASK #01</div>
+    </div>
+
+    <!-- Trade execution receipt modal -->
+    <div id="trade-receipt-banner">
+      <div class="receipt-title">
+        <span>✓ TRADE ORDER EXECUTED & VERIFIED</span>
+      </div>
+      <div class="receipt-body">
+        ORDER: 1.25 BTC BUY/LONG @ $68,450.00<br>
+        STATUS: 100% FILLED // ZERO DOM LOCATORS USED
+      </div>
+    </div>
+
     <div class="control-panel">
       <!-- Mask 1: Candlestick Timeframe Selector -->
-      <div class="card-container" id="mask-01-container">
+      <div class="card-container" id="mask-01-card">
         <div class="card-label">
           <span>1. TIMEFRAME INTERVAL</span>
           <span class="mask-badge">MASK #01</span>
         </div>
         <div class="timeframe-group">
-          <button class="tf-btn" onclick="selectTf(this, '15m')">15m</button>
-          <button class="tf-btn" onclick="selectTf(this, '1h')">1h</button>
-          <button class="tf-btn active" onclick="selectTf(this, '4h')">4h</button>
-          <button class="tf-btn" onclick="selectTf(this, '1D')">1D</button>
+          <button class="tf-btn" id="btn-15m" onclick="selectTf('15m')">15m</button>
+          <button class="tf-btn" id="btn-1h" onclick="selectTf('1h')">1h</button>
+          <button class="tf-btn active" id="btn-4h" onclick="selectTf('4h')">4h</button>
+          <button class="tf-btn" id="btn-1D" onclick="selectTf('1D')">1D</button>
         </div>
         <div class="status-text" id="tf-status">INTERVAL: 4H [BULLISH SWING // LOCKED]</div>
       </div>
 
       <!-- Mask 2: Algorithmic Indicator Overlay -->
-      <div class="card-container" id="mask-02-container">
+      <div class="card-container" id="mask-02-card">
         <div class="card-label">
           <span>2. INDICATOR OVERLAY</span>
           <span class="mask-badge">MASK #02</span>
@@ -334,7 +469,7 @@
       </div>
 
       <!-- Mask 3: Risk Management & Order Size -->
-      <div class="card-container" id="mask-03-container">
+      <div class="card-container" id="mask-03-card">
         <div class="card-label">
           <span>3. ORDER CONTRACT SIZE</span>
           <span class="mask-badge">MASK #03</span>
@@ -343,7 +478,7 @@
       </div>
 
       <!-- Mask 4: Trade Order Dispatch -->
-      <div class="card-container" id="mask-04-container">
+      <div class="card-container" id="mask-04-card">
         <div class="card-label">
           <span>4. TRADE DISPATCH</span>
           <span class="mask-badge">MASK #04</span>
@@ -356,10 +491,10 @@
 
     <div class="chart-container">
       <div class="chart-overlay-info">
-        <div>BTC/USD 4H: <span id="overlay-price" style="color: #26a69a;">$68,450.00</span></div>
+        <div>BTC/USD: <span id="overlay-price" style="color: #26a69a;">$68,450.00</span></div>
         <div>EMA 20: <span style="color: #2962ff;">$67,980.00</span></div>
         <div>EMA 50: <span style="color: #ff9800;">$66,820.00</span></div>
-        <div>24H VOL: <span style="color: #d1d4dc;">48,290 BTC</span></div>
+        <div>TIMEFRAME: <span id="overlay-tf" style="color: #34d399;">4H</span></div>
       </div>
       <div id="tv-chart"></div>
     </div>
@@ -415,24 +550,29 @@
       wickDownColor: '#ef5350',
     });
 
-    // Add EMA 20 line
+    // Add EMA 20 line (cyan)
     const ema20Series = chart.addSeries(LightweightCharts.LineSeries, {
       color: '#2962ff',
       lineWidth: 2,
       title: 'EMA 20',
     });
 
-    // Add EMA 50 line
+    // Add EMA 50 line (amber)
     const ema50Series = chart.addSeries(LightweightCharts.LineSeries, {
       color: '#ff9800',
       lineWidth: 2,
       title: 'EMA 50',
     });
 
+    // Initialize Markers Primitive
+    let seriesMarkers = null;
+    try {
+      seriesMarkers = LightweightCharts.createSeriesMarkers(candleSeries, []);
+    } catch (_) {}
+
     // Generate initial historical candles
     const now = Math.floor(Date.now() / 1000);
     const intervalSeconds = 4 * 3600; // 4H
-    let currentPrice = 68450.0;
     const candleData = [];
     const ema20Data = [];
     const ema50Data = [];
@@ -452,7 +592,6 @@
       ema50Data.push({ time: t, value: close * 0.982 });
     }
 
-    // Set data
     candleSeries.setData(candleData);
     ema20Series.setData(ema20Data);
     ema50Series.setData(ema50Data);
@@ -471,16 +610,47 @@
       document.getElementById('overlay-price').textContent = formatted;
     }, 1200);
 
-    // Interactive button controls
-    function selectTf(btn, tf) {
-      document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tf-status').textContent = 'INTERVAL: ' + tf.toUpperCase() + ' [BULLISH SWING // LOCKED]';
+    // Action function: Show PPT Laser Pointer over a target element
+    function pointLaserAt(elementId, labelText) {
+      const el = document.getElementById(elementId);
+      const laser = document.getElementById('ppt-laser-pointer');
+      const label = document.getElementById('laser-label');
+      if (!el || !laser) return;
+
+      document.querySelectorAll('.card-container').forEach(c => c.classList.remove('target-active'));
+      const card = el.closest('.card-container');
+      if (card) card.classList.add('target-active');
+
+      const rect = el.getBoundingClientRect();
+      const parentRect = document.querySelector('.main-workspace').getBoundingClientRect();
+      const x = rect.left - parentRect.left + (rect.width / 2) - 12;
+      const y = rect.top - parentRect.top + (rect.height / 2) - 12;
+
+      laser.style.display = 'block';
+      laser.style.left = x + 'px';
+      laser.style.top = y + 'px';
+      label.textContent = labelText;
     }
 
+    function hideLaser() {
+      const laser = document.getElementById('ppt-laser-pointer');
+      if (laser) laser.style.display = 'none';
+      document.querySelectorAll('.card-container').forEach(c => c.classList.remove('target-active'));
+    }
+
+    // Step 1: Select Timeframe
+    function selectTf(tf) {
+      document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById('btn-' + tf);
+      if (activeBtn) activeBtn.classList.add('active');
+      document.getElementById('tf-status').textContent = 'INTERVAL: ' + tf.toUpperCase() + ' [BULLISH SWING // LOCKED]';
+      document.getElementById('overlay-tf').textContent = tf.toUpperCase();
+    }
+
+    // Step 2: Toggle EMA indicator
     let emaEnabled = true;
-    function toggleEma() {
-      emaEnabled = !emaEnabled;
+    function setEmaState(enabled) {
+      emaEnabled = enabled;
       const btn = document.getElementById('ema-toggle-btn');
       const lbl = document.getElementById('ema-toggle-label');
       if (emaEnabled) {
@@ -495,18 +665,124 @@
         ema50Series.applyOptions({ visible: false });
       }
     }
+    function toggleEma() {
+      setEmaState(!emaEnabled);
+    }
 
-    let orderFilled = true;
-    function executeOrder() {
-      orderFilled = !orderFilled;
+    // Step 3: Set Contract Size
+    function setContractSize(value) {
+      const input = document.getElementById('contract-size-input');
+      input.value = value;
+      input.style.borderColor = '#10b981';
+      input.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.4)';
+    }
+
+    // Step 4: Execute Trade Order & Place Candlestick Marker
+    let orderFilled = false;
+    function setOrderExecution(filled) {
+      orderFilled = filled;
       const btn = document.getElementById('dispatch-btn');
+      const receipt = document.getElementById('trade-receipt-banner');
+
       if (orderFilled) {
         btn.classList.add('filled');
         btn.textContent = 'ORDER FILLED [100% VERIFIED]';
+        receipt.style.display = 'block';
+
+        // Add a Buy marker directly on the TradingView chart!
+        if (seriesMarkers) {
+          try {
+            seriesMarkers.setMarkers([
+              {
+                time: lastCandle.time,
+                position: 'belowBar',
+                color: '#10b981',
+                shape: 'arrowUp',
+                text: 'BUY 1.25 BTC @ $' + lastCandle.close.toFixed(2),
+              }
+            ]);
+          } catch (_) {}
+        }
       } else {
         btn.classList.remove('filled');
         btn.textContent = 'EXECUTE MARKET ORDER [BUY / LONG]';
+        receipt.style.display = 'none';
+        if (seriesMarkers) {
+          try { seriesMarkers.setMarkers([]); } catch (_) {}
+        }
       }
+    }
+    function executeOrder() {
+      setOrderExecution(!orderFilled);
+    }
+
+    // Main state dispatcher triggered by Dashboard runs or postMessage
+    function applyState(state) {
+      state = (state || '').toLowerCase();
+      console.log('[TradingView Canvas] Applying actuation state:', state);
+
+      if (state.includes('step_4') || state.includes('final')) {
+        selectTf('4h');
+        setEmaState(true);
+        setContractSize('CONTRACT_SIZE: 1.25 BTC [LIMIT $68,450.00]');
+        setOrderExecution(true);
+        pointLaserAt('dispatch-btn', '✦ ACTUATION: CLICK MASK #04 [BUY ORDER]');
+      } else if (state.includes('step_3')) {
+        selectTf('4h');
+        setEmaState(true);
+        setContractSize('CONTRACT_SIZE: 1.25 BTC [LIMIT $68,450.00]');
+        setOrderExecution(false);
+        pointLaserAt('contract-size-input', '✦ ACTUATION: TYPE MASK #03 [1.25 BTC]');
+      } else if (state.includes('step_2')) {
+        selectTf('4h');
+        setEmaState(true);
+        setContractSize('CONTRACT_SIZE: <enter size>');
+        setOrderExecution(false);
+        pointLaserAt('ema-toggle-btn', '✦ ACTUATION: TOGGLE MASK #02 [EMA CROSS]');
+      } else if (state.includes('step_1')) {
+        selectTf('4h');
+        setEmaState(false);
+        setContractSize('CONTRACT_SIZE: <enter size>');
+        setOrderExecution(false);
+        pointLaserAt('btn-4h', '✦ ACTUATION: CLICK MASK #01 [4H INTERVAL]');
+      } else {
+        // Initial state
+        selectTf('15m');
+        setEmaState(false);
+        setContractSize('CONTRACT_SIZE: <awaiting plan>');
+        setOrderExecution(false);
+        pointLaserAt('mask-01-card', '✦ PLANNED TARGET: MASK #01 [TIMEFRAME]');
+      }
+    }
+
+    // Listen to postMessage from Flutter Web HUD
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data) return;
+      if (data.type === 'MUSEPILOT_STEP') {
+        applyState(data.state);
+      }
+    });
+
+    // Auto-run simulation for live demonstrations
+    let autoRunTimer = null;
+    function autoRunDemo() {
+      const btn = document.getElementById('auto-run-btn');
+      btn.textContent = '⏳ RUNNING DEMO TRADE...';
+      btn.style.background = '#10b981';
+
+      applyState('initial');
+      setTimeout(() => applyState('step_1'), 1200);
+      setTimeout(() => applyState('step_2'), 2500);
+      setTimeout(() => applyState('step_3'), 3800);
+      setTimeout(() => {
+        applyState('final');
+        btn.textContent = '✓ DEMO TRADE COMPLETE';
+        setTimeout(() => {
+          btn.textContent = '⚡ AUTO-RUN TRADING FLOW';
+          btn.style.background = '#2962ff';
+        }, 3000);
+      }, 5100);
     }
   </script>
 </body>

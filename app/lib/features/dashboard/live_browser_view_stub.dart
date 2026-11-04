@@ -17,11 +17,13 @@ class LiveBrowserWidget extends StatelessWidget {
   const LiveBrowserWidget({
     required this.url,
     this.title = 'TradingView BTC/USD Market Terminal',
+    this.currentState = 'initial',
     super.key,
   });
 
   final String url;
   final String title;
+  final String currentState;
 
   @override
   Widget build(BuildContext context) {

@@ -460,9 +460,10 @@ class _SomViewerState extends State<SomViewer> {
                             ),
                           )
                         : (_showLiveBrowser && widget.workflow == 'w1'
-                            ? const LiveBrowserWidget(
+                            ? LiveBrowserWidget(
                                 url: '/tradingview_live.html',
                                 title: 'TradingView BTC/USD Real-Time Perpetual Market',
+                                currentState: widget.selectedState,
                               )
                             : Image.network(
                                 activeDisplayUrl,

@@ -4,6 +4,7 @@
 library;
 
 // ignore_for_file: avoid_web_libraries_in_flutter
+import 'dart:js_interop';
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
@@ -42,11 +43,13 @@ class LiveBrowserWidget extends StatefulWidget {
   const LiveBrowserWidget({
     required this.url,
     this.title = 'TradingView BTC/USD Market Terminal',
+    this.currentState = 'initial',
     super.key,
   });
 
   final String url;
   final String title;
+  final String currentState;
 
   @override
   State<LiveBrowserWidget> createState() => _LiveBrowserWidgetState();
@@ -58,9 +61,36 @@ class _LiveBrowserWidgetState extends State<LiveBrowserWidget> {
   @override
   void initState() {
     super.initState();
-    // Unique view type per URL to avoid iframe cache collisions
     _viewType = 'tv-iframe-${widget.url.hashCode.abs()}';
     _ensureIframeRegistered(_viewType, widget.url);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _notifyIframe(widget.currentState);
+    });
+  }
+
+  @override
+  void didUpdateWidget(LiveBrowserWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentState != widget.currentState) {
+      _notifyIframe(widget.currentState);
+    }
+  }
+
+  void _notifyIframe(String state) {
+    try {
+      final iframes = web.document.querySelectorAll('iframe');
+      for (var i = 0; i < iframes.length; i++) {
+        final iframe = iframes.item(i) as web.HTMLIFrameElement?;
+        if (iframe != null &&
+            (iframe.src.contains('tradingview_live') ||
+                iframe.src.contains('tv-iframe'))) {
+          iframe.contentWindow?.postMessage(
+            {'type': 'MUSEPILOT_STEP', 'state': state}.jsify(),
+            '*'.toJS,
+          );
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -68,4 +98,5 @@ class _LiveBrowserWidgetState extends State<LiveBrowserWidget> {
     return HtmlElementView(viewType: _viewType);
   }
 }
+
 
