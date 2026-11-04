@@ -897,10 +897,13 @@
             <button class="nav-btn primary" style="padding: 8px 16px; font-size: 11.5px;" onclick="openLiveModal('/tradingview_live.html', 'Live TradingView Pro WebGL Canvas · SAM 3.1 Set-of-Mark Grounding')">
               📈 LAUNCH LIVE TRADINGVIEW CANVAS DEMO
             </button>
-            <a href="/" target="_blank" class="nav-btn" style="padding: 8px 16px; font-size: 11.5px;">
-              🚀 OPEN MISSION CONTROL HUD
+            <a href="/assets/musepilot_final_presentation_3min.mp4" target="_blank" class="nav-btn primary" style="padding: 8px 14px; font-size: 11.5px; border-color: #f59e0b;">
+              🎬 WATCH 3:00 NARRATED VIDEO
             </a>
-            <a href="https://github.com/subhajitkp007/MusePilot" target="_blank" class="nav-btn" style="padding: 8px 14px; font-size: 11.5px;">
+            <a href="/" target="_blank" class="nav-btn" style="padding: 8px 14px; font-size: 11.5px;">
+              🚀 MISSION CONTROL HUD
+            </a>
+            <a href="https://github.com/subhajitkp007/MusePilot" target="_blank" class="nav-btn" style="padding: 8px 12px; font-size: 11.5px;">
               ⭐ GITHUB REPO
             </a>
           </div>
@@ -2309,6 +2312,32 @@ subprocess.<span class="fn">run</span>([<span class="str">"adb"</span>, <span cl
     function toggleNotes() {
       document.getElementById('notesDrawer').classList.toggle('open');
     }
+
+    // Apply URL query parameters for automated fullscreen video recording states
+    window.addEventListener('DOMContentLoaded', () => {
+      const q = new URLSearchParams(window.location.search);
+      const viewMode = q.get('view');
+      if (viewMode === 'workspace') {
+        const btns = document.querySelectorAll('#deck section.slide:first-child .sim-tab-btn');
+        setHeroArtwork('workspace', btns[1] || null);
+      }
+      const scenarioMode = q.get('scenario');
+      if (scenarioMode === 'canvas' || scenarioMode === 'android' || scenarioMode === 'retina') {
+        const btns = document.querySelectorAll('#deck section.slide:nth-child(2) .sim-tab-btn');
+        const idxMap = { retina: 0, canvas: 1, android: 2 };
+        setDriftScenario(scenarioMode, btns[idxMap[scenarioMode]] || null);
+      }
+      const modalMode = q.get('modal');
+      if (modalMode === 'tradingview') {
+        openLiveModal('/tradingview_live.html', 'Live TradingView Pro WebGL Canvas · SAM 3.1 Set-of-Mark Grounding');
+      } else if (modalMode === 'canvas') {
+        openLiveModal('/canvas_demo.html', 'Northbeam Zero-DOM HTML5 Canvas Calibration Console');
+      }
+      const timerOverride = q.get('timer');
+      if (timerOverride) {
+        document.getElementById('timerText').textContent = `${timerOverride} PITCH`;
+      }
+    });
 
     // Fullscreen Toggle
     function toggleFullscreen() {
