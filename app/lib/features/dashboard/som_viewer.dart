@@ -11,6 +11,7 @@ import '../../../core/api_client.dart';
 import '../../../models/trace.dart';
 import '../../../theme/meta_theme.dart';
 import '../../../widgets/section_card.dart';
+import 'live_browser_view.dart';
 
 /// Grounding view layer: SAM 3.1 masks with numbered target badges,
 /// or direct device view (live mirror for ADB/desktop, clean screen for simulated).
@@ -55,6 +56,7 @@ class _SomViewerState extends State<SomViewer> {
   Timer? _liveStreamTimer;
   bool _liveStreaming = true;
   bool _hasLoadedLiveFrame = false;
+  bool _showLiveBrowser = false;
 
   @override
   void didUpdateWidget(SomViewer oldWidget) {
@@ -62,6 +64,9 @@ class _SomViewerState extends State<SomViewer> {
     if (oldWidget.driver != widget.driver) {
       _hasLoadedLiveFrame = false;
       _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
+    }
+    if (oldWidget.workflow != widget.workflow) {
+      _showLiveBrowser = false;
     }
   }
 
@@ -179,33 +184,87 @@ class _SomViewerState extends State<SomViewer> {
             ),
             const SizedBox(width: 4),
           ],
-          // Single unified tab indicating active mode: Live Mirror for ADB/Desktop, SAM Grounding for simulated canvas
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: MetaTheme.metaBlue,
+          if (widget.workflow == 'w1' && !isLiveDriver) ...[
+            InkWell(
               borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isShowingLiveMirror
-                      ? Icons.phone_android_rounded
-                      : Icons.radar,
-                  size: 13,
-                  color: Colors.white,
+              onTap: () => openExternalUrl('https://www.tradingview.com/chart/'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: MetaTheme.surfaceCardElevated,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: MetaTheme.surfaceCardBorder),
                 ),
-                const SizedBox(width: 5),
-                Text(
-                  isShowingLiveMirror ? 'Live Mirror' : 'SAM Grounding',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.open_in_new,
+                      size: 11,
+                      color: MetaTheme.metaBlueDark,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'TradingView.com',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: MetaTheme.metaBlueDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          // Single unified tab indicating active mode: Live Mirror for ADB/Desktop, SAM Grounding or Live Browser for simulated canvas
+          InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: (widget.workflow == 'w1' && !isLiveDriver)
+                ? () {
+                    setState(() {
+                      _showLiveBrowser = !_showLiveBrowser;
+                    });
+                  }
+                : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: _showLiveBrowser ? MetaTheme.emeraldVerified : MetaTheme.metaBlue,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isShowingLiveMirror
+                        ? Icons.phone_android_rounded
+                        : (_showLiveBrowser ? Icons.public : Icons.radar),
+                    size: 13,
                     color: Colors.white,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 5),
+                  Text(
+                    isShowingLiveMirror
+                        ? 'Live Mirror'
+                        : (_showLiveBrowser ? 'Live Browser View' : 'SAM Grounding'),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (widget.workflow == 'w1' && !isLiveDriver) ...[
+                    const SizedBox(width: 5),
+                    Icon(
+                      _showLiveBrowser ? Icons.swap_horiz : Icons.touch_app,
+                      size: 11,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ],
@@ -282,9 +341,67 @@ class _SomViewerState extends State<SomViewer> {
               ),
             ),
 
+          if (_showLiveBrowser && widget.workflow == 'w1' && !isLiveDriver)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: MetaTheme.metaBlue.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: MetaTheme.metaBlueDark.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.public,
+                    size: 16,
+                    color: MetaTheme.metaBlueDark,
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'LIVE BROWSER ACTIVE (TradingView HTML5 Canvas): Notice 0 DOM elements exist inside the chart. '
+                      'Playwright locator clicks fail here. Click the badge above to toggle Meta SAM 3.1 visual grounding.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _showLiveBrowser = false;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: MetaTheme.metaBlueDark,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'View SAM Grounding',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Grounding canvas display - Matched in height to Run control
           Container(
-            height: isObstructed || isHealed
+            height: (isObstructed || isHealed || (_showLiveBrowser && widget.workflow == 'w1' && !isLiveDriver))
                 ? 350
                 : ((widget.states.length > 1 && !isShowingLiveMirror) ? 398 : 442),
             width: double.infinity,
@@ -342,37 +459,43 @@ class _SomViewerState extends State<SomViewer> {
                               ),
                             ),
                           )
-                        : Image.network(
-                            activeDisplayUrl,
-                            fit: BoxFit.contain,
-                            gaplessPlayback: true,
-                            loadingBuilder: (context, child, progress) {
-                              if (progress == null) {
-                                _hasLoadedLiveFrame = true;
-                                return child;
-                              }
-                              if (_hasLoadedLiveFrame) {
-                                return child;
-                              }
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            },
-                            errorBuilder: (context, error, stack) => Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.broken_image_outlined,
-                                    size: 36,
-                                    color: theme.disabledColor,
+                        : (_showLiveBrowser && widget.workflow == 'w1'
+                            ? const LiveBrowserWidget(
+                                url:
+                                    'https://s.tradingview.com/widgetembed/?symbol=BINANCE%3ABTCUSDT&interval=60&theme=dark&style=1&timezone=Etc%2FUTC&locale=en',
+                                title: 'TradingView BTC/USD Real-Time Perpetual Market',
+                              )
+                            : Image.network(
+                                activeDisplayUrl,
+                                fit: BoxFit.contain,
+                                gaplessPlayback: true,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) {
+                                    _hasLoadedLiveFrame = true;
+                                    return child;
+                                  }
+                                  if (_hasLoadedLiveFrame) {
+                                    return child;
+                                  }
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                },
+                                errorBuilder: (context, error, stack) => Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.broken_image_outlined,
+                                        size: 36,
+                                        color: theme.disabledColor,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text('Frame unavailable for this state.'),
+                                    ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  const Text('Frame unavailable for this state.'),
-                                ],
-                              ),
-                            ),
-                          ),
+                                ),
+                              )),
                   ),
                   // Overlay telemetry tag
                   Positioned(
@@ -407,6 +530,21 @@ class _SomViewerState extends State<SomViewer> {
                                 color: Colors.white,
                               ),
                             ),
+                          ] else if (_showLiveBrowser && widget.workflow == 'w1') ...[
+                            const Icon(
+                              Icons.public,
+                              size: 12,
+                              color: MetaTheme.emeraldVerified,
+                            ),
+                            const SizedBox(width: 5),
+                            const Text(
+                              'Live Browser · Real-Time WebGL/HTML5 Canvas · TradingView BTC/USD',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
                           ] else ...[
                             const Icon(
                               Icons.blur_on,
@@ -429,7 +567,7 @@ class _SomViewerState extends State<SomViewer> {
                   ),
 
                   // PPT Laser pointer indicator (for non-Android simulation & canvas)
-                  if (!isShowingLiveMirror)
+                  if (!isShowingLiveMirror && !_showLiveBrowser)
                     Positioned(
                       top: 10,
                       right: 10,
@@ -463,9 +601,55 @@ class _SomViewerState extends State<SomViewer> {
             ),
 
           // Stage Timeline Scrubber
-          if (widget.states.length > 1 && !isShowingLiveMirror) ...[
+          if (widget.states.length > 1 && !isShowingLiveMirror && !_showLiveBrowser) ...[
             const SizedBox(height: 10),
             _buildTimelineScrubber(),
+          ],
+          if (_showLiveBrowser && widget.workflow == 'w1' && !isLiveDriver) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: MetaTheme.surfaceCardElevated,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: MetaTheme.surfaceCardBorder),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.show_chart, size: 14, color: MetaTheme.emeraldVerified),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'INTERACTIVE LIVE CANVAS: Real-time Binance BTC/USDT Perpetual Market • Pan, zoom, and test clicks',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => openExternalUrl('https://www.tradingview.com/chart/'),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Open Full Screen',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: MetaTheme.metaBlueDark,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(Icons.open_in_new, size: 11, color: MetaTheme.metaBlueDark),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ],
       ),
