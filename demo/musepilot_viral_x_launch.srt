@@ -1,0 +1,63 @@
+1
+00:00:00,000 --> 00:00:03,010
+🔥 Why do 90% of AI computer-use agents fail in production?
+
+2
+00:00:03,010 --> 00:00:07,050
+Because LLMs guess raw [x, y] pixels—drifting by 24px on Retina 2.0× displays!
+
+3
+00:00:07,050 --> 00:00:10,490
+Even worse: on WebGL & HTML5 Canvas apps like TradingView Pro,
+
+4
+00:00:10,490 --> 00:00:14,100
+Playwright and Selenium crash 100% of the time—0 DOM nodes exist!
+
+5
+00:00:14,100 --> 00:00:17,150
+Meet MusePilot — powered by 4 native Meta AI models (SAM 3.1 + Muse Spark).
+
+6
+00:00:17,150 --> 00:00:20,720
+Our Pydantic schema mathematically forbids the LLM from emitting raw [x, y] coordinates!
+
+7
+00:00:20,720 --> 00:00:24,570
+1️⃣ Meta SAM 3.1 segments exact Set-of-Mark badges ([01], [02]) with 0.0px drift.
+
+8
+00:00:24,570 --> 00:00:28,850
+2️⃣ Muse Spark 1.3 plans by ID · 3️⃣ Muse Spark Open on Baseten verifies ROI pixel deltas!
+
+9
+00:00:28,850 --> 00:00:32,280
+📈 Live Demo 1 (Zero-DOM TradingView Canvas): Locks 4H interval [01],
+
+10
+00:00:32,280 --> 00:00:36,720
+enables EMA 20/50 Golden Cross [02], sets 1.25 BTC [03], and verifies ORDER FILLED [04]!
+
+11
+00:00:36,720 --> 00:00:40,560
+📱 Live Demo 2 (Physical Samsung S25 Ultra · Wireless ADB · Zero APK):
+
+12
+00:00:40,560 --> 00:00:45,410
+Muse Voice 1.0 transcribes speech -> disables Sunday alarms -> scrolls Instagram Reels!
+
+13
+00:00:45,410 --> 00:00:49,110
+🛡️ Closed-Loop Self-Healing: Detects blocked click (ROI Δ = 0.000), flushes SAM cache,
+
+14
+00:00:49,110 --> 00:00:52,630
+autonomously dismisses blocker modal [05], and heals 35/35 obstructed runs (100%)!
+
+15
+00:00:52,630 --> 00:00:56,480
+🏆 100.0% Hit Rate across 367 Steps · 8-Tool MCP Server for Cursor & Claude Desktop.
+
+16
+00:00:56,480 --> 00:01:00,000
+⭐ Open-Source on GitHub: github.com/subhajitkp007/MusePilot — Like & Repost!
