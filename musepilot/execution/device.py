@@ -198,11 +198,10 @@ class AdbDeviceDriver(DeviceDriver):
         escaped = value.replace("%", "%25").replace(" ", "%s")
         self._run("shell", "input", "text", escaped)
 
-    def capture_frame(self, state_label: str = "initial") -> CapturedFrame:
-        """Capture the device screen via fast raw screencap (falling back to -p PNG) as a hashed frame."""
-        image: Image.Image | None = None
+    def _grab_raw_or_png_image(self) -> Image.Image:
+        """Capture the device screen via zero-copy raw screencap (falling back to -p PNG)."""
         try:
-            # Fast path: raw framebuffer dump (avoids mobile CPU PNG compression, 2x faster)
+            # Fast path: raw framebuffer dump (avoids mobile CPU PNG compression)
             raw_proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
                 [self._adb, "-s", self._serial, "exec-out", "screencap"],
                 capture_output=True,
@@ -214,19 +213,53 @@ class AdbDeviceDriver(DeviceDriver):
                 w, h, _fmt = struct.unpack("<III", raw[:12])
                 expected_len = 16 + (w * h * 4)
                 if len(raw) == expected_len:
-                    image = Image.frombytes("RGBA", (w, h), raw[16:], "raw", "RGBA").convert("RGB")
+                    return Image.frombuffer(
+                        "RGBA", (w, h), memoryview(raw)[16:], "raw", "RGBA", 0, 1
+                    ).convert("RGB")
         except Exception as exc:
             logger.debug(f"Raw screencap fast-path bypassed: {exc}")
 
-        if image is None:
-            proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
-                [self._adb, "-s", self._serial, "exec-out", "screencap", "-p"],
+        proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
+            [self._adb, "-s", self._serial, "exec-out", "screencap", "-p"],
+            capture_output=True,
+            check=True,
+            timeout=30,
+        )
+        return Image.open(io.BytesIO(proc.stdout)).convert("RGB")
+
+    def capture_preview_image(self, max_width: int = 540) -> Image.Image:
+        """Fast unhashed preview capture optimized for low-latency web HUD mirroring."""
+        try:
+            raw_proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
+                [self._adb, "-s", self._serial, "exec-out", "screencap"],
                 capture_output=True,
                 check=True,
-                timeout=30,
+                timeout=10,
             )
-            image = Image.open(io.BytesIO(proc.stdout)).convert("RGB")
+            raw = raw_proc.stdout
+            if len(raw) >= 16:
+                w, h, _fmt = struct.unpack("<III", raw[:12])
+                expected_len = 16 + (w * h * 4)
+                if len(raw) == expected_len:
+                    rgba = Image.frombuffer(
+                        "RGBA", (w, h), memoryview(raw)[16:], "raw", "RGBA", 0, 1
+                    )
+                    if w > max_width:
+                        target_h = int(h * (max_width / w))
+                        rgba = rgba.resize((max_width, target_h), Image.Resampling.BILINEAR)
+                    return rgba.convert("RGB")
+        except Exception as exc:
+            logger.debug(f"Preview raw screencap fast-path bypassed: {exc}")
 
+        img = self._grab_raw_or_png_image()
+        if img.width > max_width:
+            target_h = int(img.height * (max_width / img.width))
+            img = img.resize((max_width, target_h), Image.Resampling.BILINEAR)
+        return img
+
+    def capture_frame(self, state_label: str = "initial") -> CapturedFrame:
+        """Capture the device screen via fast raw screencap (falling back to -p PNG) as a hashed frame."""
+        image = self._grab_raw_or_png_image()
         width, height = image.size
         return CapturedFrame(
             image=image,

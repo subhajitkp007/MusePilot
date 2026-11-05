@@ -893,35 +893,49 @@ async def get_som_frame(request: Request) -> Response | JSONResponse:
 
 
 class LiveMirrorManager:
-    """High-framerate in-memory caching and background streamer for live device mirrors."""
+    """High-framerate in-memory double-buffered streamer for live device mirrors."""
 
     def __init__(self) -> None:
-        self._cache: dict[str, tuple[bytes, str, float]] = {}
+        self._cache: dict[str, tuple[bytes, str, float, int]] = {}
         self._lock = threading.Lock()
         self._active_until: dict[str, float] = {}
-        self._workers: dict[str, threading.Thread] = {}
+        self._workers: dict[str, list[threading.Thread]] = {}
+        self._seq: dict[str, int] = {}
 
     def get_frame(
         self,
         driver_name: str,
         serial: str | None = None,
         img_format: str = "png",
-        max_age: float = 0.35,
+        max_age: float = 0.08,
     ) -> tuple[bytes, str]:
+        data, media_type, _seq = self.get_frame_with_seq(
+            driver_name=driver_name,
+            serial=serial,
+            img_format=img_format,
+            max_age=max_age,
+        )
+        return data, media_type
+
+    def get_frame_with_seq(
+        self,
+        driver_name: str,
+        serial: str | None = None,
+        img_format: str = "png",
+        max_age: float = 0.08,
+    ) -> tuple[bytes, str, int]:
         key = f"{driver_name}:{serial or ''}:{img_format}"
         now = time.time()
-        self._active_until[key] = now + 15.0
-
-        with self._lock:
-            cached = self._cache.get(key)
-            if cached and (now - cached[2]) < max_age:
-                return cached[0], cached[1]
+        self._active_until[key] = now + 20.0
 
         if driver_name in ("adb", "desktop"):
             self._ensure_worker(key, driver_name, serial, img_format)
 
-        if cached:
-            return cached[0], cached[1]
+        with self._lock:
+            cached = self._cache.get(key)
+            if cached is not None:
+                if driver_name in ("adb", "desktop") or (now - cached[2]) < max_age:
+                    return cached[0], cached[1], cached[3]
 
         return self._capture_and_store(key, driver_name, serial, img_format)
 
@@ -929,22 +943,41 @@ class LiveMirrorManager:
         self, key: str, driver_name: str, serial: str | None, img_format: str
     ) -> None:
         with self._lock:
-            thread = self._workers.get(key)
-            if thread and thread.is_alive():
+            existing = [t for t in self._workers.get(key, []) if t.is_alive()]
+            target_workers = 2 if driver_name == "adb" else 1
+            if len(existing) >= target_workers:
+                self._workers[key] = existing
                 return
 
-            def loop() -> None:
-                driver = get_device_driver(driver_name, serial=serial)
-                while time.time() < self._active_until.get(key, 0):
-                    try:
-                        self._capture_and_store(key, driver_name, serial, img_format, driver=driver)
-                    except Exception as exc:
-                        logger.debug(f"Live mirror background capture: {exc}")
-                    time.sleep(0.05)
+            needed = target_workers - len(existing)
+            for idx in range(needed):
+                stagger_s = 0.16 * idx
 
-            t = threading.Thread(target=loop, daemon=True, name=f"live-mirror-{key}")
-            self._workers[key] = t
-            t.start()
+                def loop(delay: float = stagger_s) -> None:
+                    if delay > 0:
+                        time.sleep(delay)
+                    try:
+                        driver = get_device_driver(driver_name, serial=serial)
+                    except Exception as exc:
+                        logger.debug(f"Live mirror worker driver init failed: {exc}")
+                        return
+                    sleep_interval = 0.015 if driver_name == "adb" else 0.04
+                    while time.time() < self._active_until.get(key, 0):
+                        try:
+                            self._capture_and_store(
+                                key, driver_name, serial, img_format, driver=driver
+                            )
+                        except Exception as exc:
+                            logger.debug(f"Live mirror background capture: {exc}")
+                            time.sleep(0.15)
+                        time.sleep(sleep_interval)
+
+                t = threading.Thread(
+                    target=loop, daemon=True, name=f"live-mirror-{key}-{len(existing) + idx}"
+                )
+                existing.append(t)
+                t.start()
+            self._workers[key] = existing
 
     def _capture_and_store(
         self,
@@ -953,12 +986,15 @@ class LiveMirrorManager:
         serial: str | None,
         img_format: str,
         driver: Any | None = None,
-    ) -> tuple[bytes, str]:
+    ) -> tuple[bytes, str, int]:
         if driver is None:
             driver = get_device_driver(driver_name, serial=serial)
         if driver is not None:
-            frame = driver.capture_frame("live_preview")
-            image = frame.image
+            if img_format == "jpeg" and hasattr(driver, "capture_preview_image"):
+                image = driver.capture_preview_image(max_width=540)
+            else:
+                frame = driver.capture_frame("live_preview")
+                image = frame.image
         else:
             capture = ScreenCaptureEngine()
             frame = capture.render_canvas_state("w1", "initial")
@@ -968,10 +1004,10 @@ class LiveMirrorManager:
         if img_format == "jpeg":
             if image.mode != "RGB":
                 image = image.convert("RGB")
-            if image.width > 720:
-                h = int(image.height * (720 / image.width))
-                image = image.resize((720, h), Image.Resampling.BILINEAR)
-            image.save(buffer, format="JPEG", quality=80, optimize=True)
+            if image.width > 540:
+                h = int(image.height * (540 / image.width))
+                image = image.resize((540, h), Image.Resampling.BILINEAR)
+            image.save(buffer, format="JPEG", quality=75, optimize=False)
             media_type = "image/jpeg"
         else:
             image.save(buffer, format="PNG")
@@ -980,8 +1016,10 @@ class LiveMirrorManager:
         data = buffer.getvalue()
         now = time.time()
         with self._lock:
-            self._cache[key] = (data, media_type, now)
-        return data, media_type
+            seq = self._seq.get(key, 0) + 1
+            self._seq[key] = seq
+            self._cache[key] = (data, media_type, now, seq)
+        return data, media_type, seq
 
 
 GLOBAL_LIVE_MIRROR = LiveMirrorManager()
@@ -998,8 +1036,8 @@ async def get_live_frame(request: Request) -> Response | JSONResponse:
         return _error("Unknown format; expected 'png' or 'jpeg'.", 400)
     normalized_format = "jpeg" if img_format in ("jpeg", "jpg") else "png"
     try:
-        data, media_type = await run_in_threadpool(
-            GLOBAL_LIVE_MIRROR.get_frame,
+        data, media_type, seq = await run_in_threadpool(
+            GLOBAL_LIVE_MIRROR.get_frame_with_seq,
             driver_name,
             serial,
             normalized_format,
@@ -1011,6 +1049,8 @@ async def get_live_frame(request: Request) -> Response | JSONResponse:
                 "Cache-Control": "no-cache, no-store, must-revalidate",
                 "Pragma": "no-cache",
                 "Expires": "0",
+                "X-Frame-Seq": str(seq),
+                "Access-Control-Expose-Headers": "X-Frame-Seq",
             },
         )
     except Exception as exc:

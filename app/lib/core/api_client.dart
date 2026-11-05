@@ -269,14 +269,44 @@ class MusePilotApi {
     String driver = 'adb',
     String? serial,
     String format = 'jpeg',
+    int? cacheBuster,
   }) {
+    final query = <String, String>{
+      'driver': driver,
+      'format': format,
+    };
+    if (serial != null) query['serial'] = serial;
+    if (cacheBuster != null) query['k'] = cacheBuster.toString();
+    return _uri('/api/frames/live', query).toString();
+  }
+
+  /// Fetch a live preview frame as raw bytes with its server sequence number.
+  Future<(Uint8List, int?)?> fetchLiveFrame({
+    String driver = 'adb',
+    String? serial,
+    String format = 'jpeg',
+  }) async {
     final query = <String, String>{
       'driver': driver,
       'format': format,
       't': DateTime.now().millisecondsSinceEpoch.toString(),
     };
     if (serial != null) query['serial'] = serial;
-    return _uri('/api/frames/live', query).toString();
+    final headers = <String, String>{};
+    if (_authToken != null) headers['Authorization'] = 'Bearer $_authToken';
+    try {
+      final response = await _client
+          .get(_uri('/api/frames/live', query), headers: headers.isEmpty ? null : headers)
+          .timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+        final seqStr = response.headers['x-frame-seq'];
+        final seq = seqStr != null ? int.tryParse(seqStr) : null;
+        return (response.bodyBytes, seq);
+      }
+    } catch (_) {
+      // Ignore transient frame poll errors during high-speed streaming.
+    }
+    return null;
   }
 
   /// Release the underlying HTTP client.

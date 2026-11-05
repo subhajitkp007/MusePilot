@@ -4,6 +4,7 @@
 library;
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -57,12 +58,18 @@ class _SomViewerState extends State<SomViewer> {
   bool _liveStreaming = true;
   bool _hasLoadedLiveFrame = false;
   bool _showLiveBrowser = false;
+  Uint8List? _liveFrameBytes;
+  int? _lastFrameSeq;
+  bool _isFetchingLiveFrame = false;
 
   @override
   void didUpdateWidget(SomViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.driver != widget.driver) {
       _hasLoadedLiveFrame = false;
+      _liveFrameBytes = null;
+      _lastFrameSeq = null;
+      _isFetchingLiveFrame = false;
       _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
     }
     if (oldWidget.workflow != widget.workflow) {
@@ -76,14 +83,39 @@ class _SomViewerState extends State<SomViewer> {
     super.dispose();
   }
 
+  static bool _isValidImageHeader(Uint8List bytes) {
+    if (bytes.length < 4) return false;
+    final isJpeg = bytes[0] == 0xFF && bytes[1] == 0xD8;
+    final isPng = bytes[0] == 0x89 && bytes[1] == 0x50;
+    return isJpeg || isPng;
+  }
+
+  Future<void> _pollNextLiveFrame() async {
+    if (_isFetchingLiveFrame || !mounted) return;
+    _isFetchingLiveFrame = true;
+    try {
+      final result = await widget.api.fetchLiveFrame(driver: widget.driver);
+      if (!mounted || result == null) return;
+      final (bytes, seq) = result;
+      if (!_isValidImageHeader(bytes)) return;
+      if (seq != null && seq == _lastFrameSeq && _liveFrameBytes != null) {
+        return;
+      }
+      setState(() {
+        _liveFrameBytes = bytes;
+        _lastFrameSeq = seq;
+        _hasLoadedLiveFrame = true;
+      });
+    } finally {
+      _isFetchingLiveFrame = false;
+    }
+  }
+
   void _syncLiveStream(bool isShowingLiveMirror) {
     if (isShowingLiveMirror && _liveStreaming) {
       if (_liveStreamTimer == null || !_liveStreamTimer!.isActive) {
-        _liveStreamTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
-          if (!mounted) return;
-          setState(() {
-            _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
-          });
+        _liveStreamTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
+          _pollNextLiveFrame();
         });
       }
     } else {
@@ -107,8 +139,10 @@ class _SomViewerState extends State<SomViewer> {
       traceId: widget.traceId,
     );
 
-    final liveUrl =
-        '${widget.api.liveFrameUrl(driver: widget.driver)}&k=$_liveTimestamp';
+    final liveUrl = widget.api.liveFrameUrl(
+      driver: widget.driver,
+      cacheBuster: _liveTimestamp,
+    );
 
     final activeDisplayUrl = isShowingLiveMirror ? liveUrl : groundingUrl;
 
@@ -178,8 +212,10 @@ class _SomViewerState extends State<SomViewer> {
               tooltip: 'Refresh live mirror',
               onPressed: () {
                 setState(() {
+                  _lastFrameSeq = null;
                   _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
                 });
+                _pollNextLiveFrame();
               },
             ),
             const SizedBox(width: 4),
@@ -420,45 +456,53 @@ class _SomViewerState extends State<SomViewer> {
                 children: [
                   Center(
                     child: isShowingLiveMirror
-                        ? Image.network(
-                            liveUrl,
-                            fit: BoxFit.contain,
-                            gaplessPlayback: true,
-                            loadingBuilder: (context, child, progress) {
-                              if (progress == null) {
-                                _hasLoadedLiveFrame = true;
-                                return child;
-                              }
-                              if (_hasLoadedLiveFrame) {
-                                return child;
-                              }
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            },
-                            errorBuilder: (context, error, stack) => Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.phone_android,
-                                    size: 36,
-                                    color: theme.disabledColor,
+                        ? (_liveFrameBytes != null
+                            ? Image.memory(
+                                _liveFrameBytes!,
+                                fit: BoxFit.contain,
+                                gaplessPlayback: true,
+                                filterQuality: FilterQuality.medium,
+                              )
+                            : Image.network(
+                                liveUrl,
+                                fit: BoxFit.contain,
+                                gaplessPlayback: true,
+                                filterQuality: FilterQuality.medium,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) {
+                                    _hasLoadedLiveFrame = true;
+                                    return child;
+                                  }
+                                  if (_hasLoadedLiveFrame) {
+                                    return child;
+                                  }
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                },
+                                errorBuilder: (context, error, stack) => Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.phone_android,
+                                        size: 36,
+                                        color: theme.disabledColor,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'No live frame for the ${widget.driver} target.',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Run on a connected target, then refresh.',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'No live frame for the ${widget.driver} target.',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Run on a connected target, then refresh.',
-                                    style: theme.textTheme.bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
+                                ),
+                              ))
                         : (_showLiveBrowser && widget.workflow == 'w1'
                             ? LiveBrowserWidget(
                                 url: '/tradingview_live.html',
@@ -523,7 +567,7 @@ class _SomViewerState extends State<SomViewer> {
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              'Live mirror · ${widget.driver.toUpperCase()} · ${_liveStreaming ? "Live Stream (Fast)" : "Paused"}',
+                              'Live mirror · ${widget.driver.toUpperCase()}${widget.driver == 'adb' ? ' (Samsung S25 Ultra)' : ''} · ${_liveStreaming ? "High-FPS Stream" : "Paused"}',
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
