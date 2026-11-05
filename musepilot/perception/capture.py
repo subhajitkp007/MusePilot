@@ -135,7 +135,12 @@ class ScreenCaptureEngine:
             # TradingView Pro Terminal brand
             draw.rounded_rectangle([20, 14, 52, 46], radius=8, fill=(30, 34, 45))
             draw.text((28, 17), "TV", fill=(41, 98, 255), font=font_brand)
-            draw.text((64, 15), "TRADINGVIEW PRO // BTC/USD PERPETUAL", fill=(240, 246, 255), font=font_brand)
+            draw.text(
+                (64, 15),
+                "TRADINGVIEW PRO // BTC/USD PERPETUAL",
+                fill=(240, 246, 255),
+                font=font_brand,
+            )
             draw.text(
                 (64, 34),
                 "Institutional Market Terminal • Opaque WebGL & HTML5 Canvas (0 DOM Nodes)",
@@ -188,10 +193,19 @@ class ScreenCaptureEngine:
         font_mono = _get_font(12, bold=True)
 
         # Card container 1 (Mask 1: Candlestick Timeframe Selector)
-        draw.rounded_rectangle([100, 120, 540, 235], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1)
-        draw.text((120, 132), "1. CANDLESTICK INTERVAL (TIMEFRAME)", fill=(210, 230, 255), font=font_title)
+        draw.rounded_rectangle(
+            [100, 120, 540, 235], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1
+        )
+        draw.text(
+            (120, 132), "1. CANDLESTICK INTERVAL (TIMEFRAME)", fill=(210, 230, 255), font=font_title
+        )
 
-        is_calibrated = "step_1" in state_label or "step_2" in state_label or "step_3" in state_label or "final" in state_label
+        is_calibrated = (
+            "step_1" in state_label
+            or "step_2" in state_label
+            or "step_3" in state_label
+            or "final" in state_label
+        )
         slider_border = (16, 185, 129) if is_calibrated else (56, 189, 248)
         draw.rectangle([120, 160, 520, 220], fill=(26, 36, 56), outline=slider_border, width=2)
 
@@ -200,42 +214,82 @@ class ScreenCaptureEngine:
         draw.line([(150, 182), (150, 198)], fill=(80, 105, 145), width=2)
         draw.line([(230, 182), (230, 198)], fill=(80, 105, 145), width=2)
         draw.line([(320, 182), (320, 198)], fill=(80, 105, 145), width=2)
-        draw.line([(420, 182), (420, 198)], fill=(16, 185, 129) if is_calibrated else (120, 140, 175), width=2)
+        draw.line(
+            [(420, 182), (420, 198)],
+            fill=(16, 185, 129) if is_calibrated else (120, 140, 175),
+            width=2,
+        )
         draw.line([(490, 182), (490, 198)], fill=(80, 105, 145), width=2)
 
         knob_x = 420 if is_calibrated else 220
         knob_fill = (16, 185, 129) if is_calibrated else (41, 98, 255)
-        draw.rounded_rectangle([knob_x - 18, 168, knob_x + 18, 212], radius=6, fill=knob_fill, outline=(255, 255, 255), width=2)
+        draw.rounded_rectangle(
+            [knob_x - 18, 168, knob_x + 18, 212],
+            radius=6,
+            fill=knob_fill,
+            outline=(255, 255, 255),
+            width=2,
+        )
 
-        slider_text = "INTERVAL: 4H [BULLISH SWING // LOCKED]" if is_calibrated else "INTERVAL: 15m [HIGH VOLATILITY DRIFT]"
+        slider_text = (
+            "INTERVAL: 4H [BULLISH SWING // LOCKED]"
+            if is_calibrated
+            else "INTERVAL: 15m [HIGH VOLATILITY DRIFT]"
+        )
         slider_txt_color = (167, 243, 208) if is_calibrated else (186, 230, 253)
         draw.text((150, 165), slider_text, fill=slider_txt_color, font=font_mono)
 
         # Card container 2 (Mask 2: Technical Indicator Toggle)
-        draw.rounded_rectangle([100, 255, 540, 375], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1)
-        draw.text((120, 267), "2. ALGORITHMIC INDICATOR OVERLAY", fill=(210, 230, 255), font=font_title)
+        draw.rounded_rectangle(
+            [100, 255, 540, 375], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1
+        )
+        draw.text(
+            (120, 267), "2. ALGORITHMIC INDICATOR OVERLAY", fill=(210, 230, 255), font=font_title
+        )
 
         damping_on = "step_2" in state_label or "step_3" in state_label or "final" in state_label
         toggle_fill = (16, 185, 129) if damping_on else (35, 46, 68)
         toggle_border = (110, 231, 183) if damping_on else (70, 85, 115)
         draw.rectangle([120, 290, 380, 360], fill=toggle_fill, outline=toggle_border, width=2)
 
-        toggle_label = "EMA 20/50/200: ENABLED [GOLDEN CROSS]" if damping_on else "EMA 20/50/200: DISABLED"
-        draw.text((135, 318), toggle_label, fill=(255, 255, 255) if damping_on else (180, 195, 220), font=font_btn)
+        toggle_label = (
+            "EMA 20/50/200: ENABLED [GOLDEN CROSS]" if damping_on else "EMA 20/50/200: DISABLED"
+        )
+        draw.text(
+            (135, 318),
+            toggle_label,
+            fill=(255, 255, 255) if damping_on else (180, 195, 220),
+            font=font_btn,
+        )
 
         # Card container 3 (Mask 3: Order Contract Size)
-        draw.rounded_rectangle([100, 395, 540, 510], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1)
-        draw.text((120, 403), "3. RISK MANAGEMENT & ORDER SIZE", fill=(210, 230, 255), font=font_title)
+        draw.rounded_rectangle(
+            [100, 395, 540, 510], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1
+        )
+        draw.text(
+            (120, 403), "3. RISK MANAGEMENT & ORDER SIZE", fill=(210, 230, 255), font=font_title
+        )
 
         gain_filled = "step_3" in state_label or "final" in state_label
         gain_border = (6, 182, 212) if gain_filled else (70, 85, 115)
         draw.rectangle([120, 420, 520, 490], fill=(14, 22, 34), outline=gain_border, width=2)
 
-        gain_text = "CONTRACT_SIZE: 1.25 BTC [LIMIT $68,450.00]" if gain_filled else "CONTRACT_SIZE: <enter size>"
-        draw.text((140, 448), gain_text, fill=(103, 232, 249) if gain_filled else (120, 140, 175), font=font_mono)
+        gain_text = (
+            "CONTRACT_SIZE: 1.25 BTC [LIMIT $68,450.00]"
+            if gain_filled
+            else "CONTRACT_SIZE: <enter size>"
+        )
+        draw.text(
+            (140, 448),
+            gain_text,
+            fill=(103, 232, 249) if gain_filled else (120, 140, 175),
+            font=font_mono,
+        )
 
         # Card container 4 (Mask 4: Trade Execution Button)
-        draw.rounded_rectangle([100, 530, 540, 660], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1)
+        draw.rounded_rectangle(
+            [100, 530, 540, 660], radius=10, fill=(19, 23, 34), outline=(42, 46, 57), width=1
+        )
         draw.text((120, 538), "4. TRADE ORDER DISPATCH", fill=(210, 230, 255), font=font_title)
 
         completed = "final" in state_label
@@ -243,14 +297,23 @@ class ScreenCaptureEngine:
         btn_border = (110, 231, 183) if completed else (147, 197, 253)
         draw.rectangle([120, 560, 440, 640], fill=btn_fill, outline=btn_border, width=2)
 
-        btn_txt = "ORDER FILLED [100% VERIFIED]" if completed else "EXECUTE MARKET ORDER [BUY / LONG]"
+        btn_txt = (
+            "ORDER FILLED [100% VERIFIED]" if completed else "EXECUTE MARKET ORDER [BUY / LONG]"
+        )
         draw.text((135, 592), btn_txt, fill=(255, 255, 255), font=font_btn)
 
         # Right-hand TradingView Candlestick Chart Viewport
-        draw.rounded_rectangle([580, 120, 1220, 660], radius=12, fill=(19, 23, 34), outline=(42, 46, 57), width=2)
+        draw.rounded_rectangle(
+            [580, 120, 1220, 660], radius=12, fill=(19, 23, 34), outline=(42, 46, 57), width=2
+        )
 
         # Viewport Header
-        draw.text((610, 142), "TRADINGVIEW // BTC/USD · 4H · BINANCE SPOT", fill=(210, 230, 255), font=font_title)
+        draw.text(
+            (610, 142),
+            "TRADINGVIEW // BTC/USD · 4H · BINANCE SPOT",
+            fill=(210, 230, 255),
+            font=font_title,
+        )
         price_text = "$68,450.00 (+3.42%)" if completed else "$66,190.00 (-0.84%)"
         price_color = (52, 211, 153) if completed else (244, 63, 94)
         draw.text((930, 142), price_text, fill=price_color, font=font_mono)
@@ -293,12 +356,14 @@ class ScreenCaptureEngine:
             # Draw body
             top_y = min(oy, cy)
             bot_y = max(oy, cy)
-            draw.rectangle([cx - 8, top_y, cx + 8, max(top_y + 3, bot_y)], fill=c_color, outline=c_color)
+            draw.rectangle(
+                [cx - 8, top_y, cx + 8, max(top_y + 3, bot_y)], fill=c_color, outline=c_color
+            )
 
         # Render EMA 20 (Cyan) and EMA 50 (Orange) Curves
         ema20_points = []
         ema50_points = []
-        for cx, oy, cy, hy, ly in candles:
+        for cx, oy, cy, _hy, _ly in candles:
             avg_y = (oy + cy) // 2
             ema20_points.append((cx, avg_y + 12))
             ema50_points.append((cx, avg_y + 28))
@@ -311,21 +376,62 @@ class ScreenCaptureEngine:
         draw.rectangle([600, 580, 1200, 640], fill=(24, 28, 38), outline=(36, 42, 54), width=1)
         vol_val = "$42.85B" if completed else "$31.20B"
         rsi_val = "64.2 [BULLISH BIAS]" if completed else "48.1 [NEUTRAL]"
-        draw.text((620, 602), f"PAIR: BTC/USD   |   24H VOL: {vol_val}   |   RSI(14): {rsi_val}   |   EMA 20/50: GOLDEN CROSS [ACTIVE]", fill=(160, 185, 220), font=font_mono)
+        draw.text(
+            (620, 602),
+            f"PAIR: BTC/USD   |   24H VOL: {vol_val}   |   RSI(14): {rsi_val}   |   EMA 20/50: GOLDEN CROSS [ACTIVE]",
+            fill=(160, 185, 220),
+            font=font_mono,
+        )
 
         # PPT-style laser pointer cursor indicating agent interaction inside target control
         from musepilot.perception.som_renderer import draw_ppt_laser_pointer
+
         if "final" in state_label or "step_4" in state_label:
-            draw_ppt_laser_pointer(draw, cx=280, cy=600, action_label="✦ ACTUATION: SUBMIT ORDER", target_detail="Centroid: (280, 600) • 1.25 BTC Long Verified [OK]", laser_color=(16, 185, 129))
+            draw_ppt_laser_pointer(
+                draw,
+                cx=280,
+                cy=600,
+                action_label="✦ ACTUATION: SUBMIT ORDER",
+                target_detail="Centroid: (280, 600) • 1.25 BTC Long Verified [OK]",
+                laser_color=(16, 185, 129),
+            )
         elif "step_3" in state_label:
-            draw_ppt_laser_pointer(draw, cx=320, cy=455, action_label="✦ ACTUATION: KEYSTROKE '1.25 BTC'", target_detail="Centroid: (320, 455) • Limit Order Size Ingest", laser_color=(6, 182, 212))
+            draw_ppt_laser_pointer(
+                draw,
+                cx=320,
+                cy=455,
+                action_label="✦ ACTUATION: KEYSTROKE '1.25 BTC'",
+                target_detail="Centroid: (320, 455) • Limit Order Size Ingest",
+                laser_color=(6, 182, 212),
+            )
         elif "step_2" in state_label:
-            draw_ppt_laser_pointer(draw, cx=250, cy=325, action_label="✦ ACTUATION: TOGGLE EMA CROSS", target_detail="Centroid: (250, 325) • Bullish Exponential Cross", laser_color=(16, 185, 129))
+            draw_ppt_laser_pointer(
+                draw,
+                cx=250,
+                cy=325,
+                action_label="✦ ACTUATION: TOGGLE EMA CROSS",
+                target_detail="Centroid: (250, 325) • Bullish Exponential Cross",
+                laser_color=(16, 185, 129),
+            )
         elif "step_1" in state_label:
-            draw_ppt_laser_pointer(draw, cx=320, cy=190, action_label="✦ ACTUATION: SELECT 4H INTERVAL", target_detail="Centroid: (320, 190) • 4-Hour Candlestick Aggregation", laser_color=(255, 45, 85))
+            draw_ppt_laser_pointer(
+                draw,
+                cx=320,
+                cy=190,
+                action_label="✦ ACTUATION: SELECT 4H INTERVAL",
+                target_detail="Centroid: (320, 190) • 4-Hour Candlestick Aggregation",
+                laser_color=(255, 45, 85),
+            )
         else:
             # Initial state: laser highlights planned starting control
-            draw_ppt_laser_pointer(draw, cx=320, cy=190, action_label="✦ PLANNED TARGET: MASK #01 [TIMEFRAME]", target_detail="Centroid: (320, 190) • 4H Interval Selector", laser_color=(255, 45, 85))
+            draw_ppt_laser_pointer(
+                draw,
+                cx=320,
+                cy=190,
+                action_label="✦ PLANNED TARGET: MASK #01 [TIMEFRAME]",
+                target_detail="Centroid: (320, 190) • 4H Interval Selector",
+                laser_color=(255, 45, 85),
+            )
 
     def _draw_w2_canvas(self, draw: ImageDraw.ImageDraw, state_label: str) -> None:
         """Draw Workflow 2: CloudOps Observability & Self-Healing Incident Command Center."""
@@ -336,8 +442,12 @@ class ScreenCaptureEngine:
         font_mono = _get_font(12, bold=True)
 
         # Card container 1 (Mask 1: Anomaly Harvester Button)
-        draw.rounded_rectangle([80, 110, 640, 240], radius=10, fill=(18, 25, 38), outline=(35, 48, 72), width=1)
-        draw.text((100, 122), "1. TELEMETRY ANOMALY HARVESTER", fill=(210, 230, 255), font=font_title)
+        draw.rounded_rectangle(
+            [80, 110, 640, 240], radius=10, fill=(18, 25, 38), outline=(35, 48, 72), width=1
+        )
+        draw.text(
+            (100, 122), "1. TELEMETRY ANOMALY HARVESTER", fill=(210, 230, 255), font=font_title
+        )
 
         extracted = state_label != "initial"
         btn1_fill = (16, 185, 129) if extracted else (14, 165, 233)
@@ -347,20 +457,33 @@ class ScreenCaptureEngine:
         draw.text((130, 180), btn1_txt, fill=(255, 255, 255), font=font_btn)
 
         # Card container 2 (Mask 2: Incident Root Cause Summary Input)
-        draw.rounded_rectangle([80, 260, 640, 395], radius=10, fill=(18, 25, 38), outline=(35, 48, 72), width=1)
-        draw.text((100, 270), "2. INCIDENT ROOT CAUSE & TRIAGE SUMMARY", fill=(210, 230, 255), font=font_title)
+        draw.rounded_rectangle(
+            [80, 260, 640, 395], radius=10, fill=(18, 25, 38), outline=(35, 48, 72), width=1
+        )
+        draw.text(
+            (100, 270),
+            "2. INCIDENT ROOT CAUSE & TRIAGE SUMMARY",
+            fill=(210, 230, 255),
+            font=font_title,
+        )
 
         typed = "step_2" in state_label or "final" in state_label
         input_border = (52, 211, 153) if typed else (70, 85, 115)
         draw.rectangle([100, 285, 620, 375], fill=(16, 24, 38), outline=input_border, width=2)
 
-        input_txt = "INCIDENT: GPU-NODE-07 LATENCY SPIKE (+42ms)" if typed else "INCIDENT REPORT SUMMARY..."
+        input_txt = (
+            "INCIDENT: GPU-NODE-07 LATENCY SPIKE (+42ms)" if typed else "INCIDENT REPORT SUMMARY..."
+        )
         input_color = (167, 243, 208) if typed else (148, 163, 184)
         draw.text((120, 322), input_txt, fill=input_color, font=font_mono)
 
         # Card container 3 (Mask 3: SRE Escalation Dispatch Button)
-        draw.rounded_rectangle([80, 415, 640, 535], radius=10, fill=(18, 25, 38), outline=(35, 48, 72), width=1)
-        draw.text((100, 423), "3. ON-CALL SRE ESCALATION ACTION", fill=(210, 230, 255), font=font_title)
+        draw.rounded_rectangle(
+            [80, 415, 640, 535], radius=10, fill=(18, 25, 38), outline=(35, 48, 72), width=1
+        )
+        draw.text(
+            (100, 423), "3. ON-CALL SRE ESCALATION ACTION", fill=(210, 230, 255), font=font_title
+        )
 
         dispatched = "final" in state_label
         btn3_fill = (16, 185, 129) if dispatched else (245, 158, 11)
@@ -370,9 +493,21 @@ class ScreenCaptureEngine:
         draw.text((135, 468), btn3_txt, fill=(255, 255, 255), font=font_btn)
 
         # Right-hand GPU Inference Cluster Telemetry Viewport
-        draw.rounded_rectangle([680, 110, 1220, 660], radius=12, fill=(10, 15, 24), outline=(35, 48, 72), width=2)
-        draw.text((710, 132), "GPU CLUSTER LATENCY PROFILE (15-MIN WINDOW)", fill=(210, 230, 255), font=font_title)
-        draw.text((710, 155), "Cluster: us-central1-gcp-h100 • Total Nodes: 8", fill=(120, 140, 175), font=font_label)
+        draw.rounded_rectangle(
+            [680, 110, 1220, 660], radius=12, fill=(10, 15, 24), outline=(35, 48, 72), width=2
+        )
+        draw.text(
+            (710, 132),
+            "GPU CLUSTER LATENCY PROFILE (15-MIN WINDOW)",
+            fill=(210, 230, 255),
+            font=font_title,
+        )
+        draw.text(
+            (710, 155),
+            "Cluster: us-central1-gcp-h100 • Total Nodes: 8",
+            fill=(120, 140, 175),
+            font=font_label,
+        )
 
         # SLA Threshold dashed line at 30ms
         draw.line([(710, 310), (1190, 310)], fill=(244, 63, 94), width=1)
@@ -385,15 +520,38 @@ class ScreenCaptureEngine:
             bar_h = int(lat * 4.2)
             is_anomaly = lat > 30.0
             b_color = (244, 63, 94) if is_anomaly else (16, 185, 129)
-            draw.rectangle([bx, 480 - bar_h, bx + 36, 480], fill=b_color, outline=(255, 255, 255) if is_anomaly else None)
-            draw.text((bx - 2, 492), f"N{i+1}", fill=(140, 160, 190), font=font_sub)
+            draw.rectangle(
+                [bx, 480 - bar_h, bx + 36, 480],
+                fill=b_color,
+                outline=(255, 255, 255) if is_anomaly else None,
+            )
+            draw.text((bx - 2, 492), f"N{i + 1}", fill=(140, 160, 190), font=font_sub)
             draw.text((bx - 4, 480 - bar_h - 16), f"{lat}m", fill=b_color, font=font_sub)
 
         # Anomaly callout
-        draw.rounded_rectangle([710, 540, 1190, 640], radius=8, fill=(35, 18, 25), outline=(244, 63, 94), width=1)
-        draw.text((730, 555), "⚠️ ROOT CAUSE CORRELATION: GPU-NODE-07 (+42ms p99)", fill=(254, 205, 211), font=font_title)
-        draw.text((730, 580), "Excess CUDA kernel memory contention detected on physical socket 0. Dispatched to on-call.", fill=(253, 164, 175), font=font_label)
-        draw.text((730, 608), "STATUS: INCIDENT CONTAINED [ACK RECEIVED]" if dispatched else "STATUS: ESCALATION PENDING OPERATOR SIGN-OFF", fill=(52, 211, 153) if dispatched else (251, 191, 36), font=font_mono)
+        draw.rounded_rectangle(
+            [710, 540, 1190, 640], radius=8, fill=(35, 18, 25), outline=(244, 63, 94), width=1
+        )
+        draw.text(
+            (730, 555),
+            "⚠️ ROOT CAUSE CORRELATION: GPU-NODE-07 (+42ms p99)",
+            fill=(254, 205, 211),
+            font=font_title,
+        )
+        draw.text(
+            (730, 580),
+            "Excess CUDA kernel memory contention detected on physical socket 0. Dispatched to on-call.",
+            fill=(253, 164, 175),
+            font=font_label,
+        )
+        draw.text(
+            (730, 608),
+            "STATUS: INCIDENT CONTAINED [ACK RECEIVED]"
+            if dispatched
+            else "STATUS: ESCALATION PENDING OPERATOR SIGN-OFF",
+            fill=(52, 211, 153) if dispatched else (251, 191, 36),
+            font=font_mono,
+        )
 
         # Modal Obstruction Popup (Self-healing showcase!)
         if "modal" in state_label:
@@ -452,14 +610,50 @@ class ScreenCaptureEngine:
 
         # PPT-style laser pointer cursor indicating agent interaction inside target control
         from musepilot.perception.som_renderer import draw_ppt_laser_pointer
+
         if "modal" in state_label:
-            draw_ppt_laser_pointer(draw, cx=640, cy=457, action_label="✦ AUTONOMOUS REPLAN: DISMISS", target_detail="Centroid: (640, 457) • Blocker Cleared & Resynced", laser_color=(255, 45, 85))
+            draw_ppt_laser_pointer(
+                draw,
+                cx=640,
+                cy=457,
+                action_label="✦ AUTONOMOUS REPLAN: DISMISS",
+                target_detail="Centroid: (640, 457) • Blocker Cleared & Resynced",
+                laser_color=(255, 45, 85),
+            )
         elif "final" in state_label or "step_3" in state_label:
-            draw_ppt_laser_pointer(draw, cx=280, cy=475, action_label="✦ ACTUATION: DISPATCH ESCALATION", target_detail="Centroid: (280, 475) • PagerDuty + Slack Acked", laser_color=(16, 185, 129))
+            draw_ppt_laser_pointer(
+                draw,
+                cx=280,
+                cy=475,
+                action_label="✦ ACTUATION: DISPATCH ESCALATION",
+                target_detail="Centroid: (280, 475) • PagerDuty + Slack Acked",
+                laser_color=(16, 185, 129),
+            )
         elif "step_2" in state_label or "recovered" in state_label:
-            draw_ppt_laser_pointer(draw, cx=360, cy=330, action_label="✦ ACTUATION: INJECT INCIDENT REPORT", target_detail="Centroid: (360, 330) • GPU-NODE-07 Latency Spike", laser_color=(52, 211, 153))
+            draw_ppt_laser_pointer(
+                draw,
+                cx=360,
+                cy=330,
+                action_label="✦ ACTUATION: INJECT INCIDENT REPORT",
+                target_detail="Centroid: (360, 330) • GPU-NODE-07 Latency Spike",
+                laser_color=(52, 211, 153),
+            )
         elif "step_1" in state_label:
-            draw_ppt_laser_pointer(draw, cx=280, cy=187, action_label="✦ ACTUATION: EXTRACT METRICS", target_detail="Centroid: (280, 187) • 142 Spans Correlated", laser_color=(16, 185, 129))
+            draw_ppt_laser_pointer(
+                draw,
+                cx=280,
+                cy=187,
+                action_label="✦ ACTUATION: EXTRACT METRICS",
+                target_detail="Centroid: (280, 187) • 142 Spans Correlated",
+                laser_color=(16, 185, 129),
+            )
         else:
             # Initial state
-            draw_ppt_laser_pointer(draw, cx=280, cy=187, action_label="✦ PLANNED TARGET: MASK #01 [CLICK]", target_detail="Centroid: (280, 187) • GPU Cluster Telemetry", laser_color=(14, 165, 233))
+            draw_ppt_laser_pointer(
+                draw,
+                cx=280,
+                cy=187,
+                action_label="✦ PLANNED TARGET: MASK #01 [CLICK]",
+                target_detail="Centroid: (280, 187) • GPU Cluster Telemetry",
+                laser_color=(14, 165, 233),
+            )
