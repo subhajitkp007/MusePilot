@@ -3,11 +3,16 @@
 /// SAM 3.1 Set-of-Mark grounding viewer with streamlined layer toggles.
 library;
 
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/api_client.dart';
+import '../../../models/trace.dart';
 import '../../../theme/meta_theme.dart';
 import '../../../widgets/section_card.dart';
+import 'live_browser_view.dart';
 
 /// Grounding view layer: SAM 3.1 masks with numbered target badges,
 /// or direct device view (live mirror for ADB/desktop, clean screen for simulated).
@@ -27,6 +32,8 @@ class SomViewer extends StatefulWidget {
     required this.traceId,
     this.isRunning = false,
     this.driver = 'simulated',
+    this.spans = const [],
+    this.liveRecords = const [],
     super.key,
   });
 
@@ -38,14 +45,84 @@ class SomViewer extends StatefulWidget {
   final String? traceId;
   final bool isRunning;
   final String driver;
+  final List<Map<String, dynamic>> spans;
+  final List<StepExecutionRecord> liveRecords;
 
   @override
   State<SomViewer> createState() => _SomViewerState();
 }
 
 class _SomViewerState extends State<SomViewer> {
-  ViewerLayer _activeLayer = ViewerLayer.grounding;
   int _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
+  Timer? _liveStreamTimer;
+  bool _liveStreaming = true;
+  bool _hasLoadedLiveFrame = false;
+  bool _showLiveBrowser = false;
+  Uint8List? _liveFrameBytes;
+  int? _lastFrameSeq;
+  bool _isFetchingLiveFrame = false;
+
+  @override
+  void didUpdateWidget(SomViewer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.driver != widget.driver) {
+      _hasLoadedLiveFrame = false;
+      _liveFrameBytes = null;
+      _lastFrameSeq = null;
+      _isFetchingLiveFrame = false;
+      _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
+    }
+    if (oldWidget.workflow != widget.workflow) {
+      _showLiveBrowser = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _liveStreamTimer?.cancel();
+    super.dispose();
+  }
+
+  static bool _isValidImageHeader(Uint8List bytes) {
+    if (bytes.length < 4) return false;
+    final isJpeg = bytes[0] == 0xFF && bytes[1] == 0xD8;
+    final isPng = bytes[0] == 0x89 && bytes[1] == 0x50;
+    return isJpeg || isPng;
+  }
+
+  Future<void> _pollNextLiveFrame() async {
+    if (_isFetchingLiveFrame || !mounted) return;
+    _isFetchingLiveFrame = true;
+    try {
+      final result = await widget.api.fetchLiveFrame(driver: widget.driver);
+      if (!mounted || result == null) return;
+      final (bytes, seq) = result;
+      if (!_isValidImageHeader(bytes)) return;
+      if (seq != null && seq == _lastFrameSeq && _liveFrameBytes != null) {
+        return;
+      }
+      setState(() {
+        _liveFrameBytes = bytes;
+        _lastFrameSeq = seq;
+        _hasLoadedLiveFrame = true;
+      });
+    } finally {
+      _isFetchingLiveFrame = false;
+    }
+  }
+
+  void _syncLiveStream(bool isShowingLiveMirror) {
+    if (isShowingLiveMirror && _liveStreaming) {
+      if (_liveStreamTimer == null || !_liveStreamTimer!.isActive) {
+        _liveStreamTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
+          _pollNextLiveFrame();
+        });
+      }
+    } else {
+      _liveStreamTimer?.cancel();
+      _liveStreamTimer = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,9 +130,8 @@ class _SomViewerState extends State<SomViewer> {
     final isObstructed = widget.selectedState.contains('modal_blocked');
     final isHealed = widget.selectedState.contains('modal_dismissed');
     final isLiveDriver = widget.driver == 'adb' || widget.driver == 'desktop';
-
-    // In device mode, load the real live stream if on ADB/Desktop; otherwise load the unsegmented frame.
-    final isShowingLiveMirror = _activeLayer == ViewerLayer.device && isLiveDriver;
+    final isShowingLiveMirror = isLiveDriver;
+    _syncLiveStream(isShowingLiveMirror);
 
     final groundingUrl = widget.api.somFrameUrl(
       workflow: widget.workflow,
@@ -63,18 +139,12 @@ class _SomViewerState extends State<SomViewer> {
       traceId: widget.traceId,
     );
 
-    final rawFrameUrl = widget.api.rawFrameUrl(
-      workflow: widget.workflow,
-      state: widget.selectedState,
-      traceId: widget.traceId,
+    final liveUrl = widget.api.liveFrameUrl(
+      driver: widget.driver,
+      cacheBuster: _liveTimestamp,
     );
 
-    final liveUrl =
-        '${widget.api.liveFrameUrl(driver: widget.driver)}&k=$_liveTimestamp';
-
-    final activeDisplayUrl = _activeLayer == ViewerLayer.grounding
-        ? groundingUrl
-        : (isShowingLiveMirror ? liveUrl : rawFrameUrl);
+    final activeDisplayUrl = isShowingLiveMirror ? liveUrl : groundingUrl;
 
     return SectionCard(
       title: 'Visual grounding',
@@ -82,7 +152,57 @@ class _SomViewerState extends State<SomViewer> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isShowingLiveMirror)
+          if (isShowingLiveMirror) ...[
+            InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: () {
+                setState(() {
+                  _liveStreaming = !_liveStreaming;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _liveStreaming
+                      ? MetaTheme.emeraldVerified.withValues(alpha: 0.15)
+                      : MetaTheme.surfaceCardElevated,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: _liveStreaming
+                        ? MetaTheme.emeraldVerified.withValues(alpha: 0.5)
+                        : MetaTheme.surfaceCardBorder,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: _liveStreaming
+                            ? MetaTheme.emeraldVerified
+                            : Colors.grey,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _liveStreaming ? 'STREAMING' : 'PAUSED',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: _liveStreaming
+                            ? MetaTheme.emeraldVerified
+                            : Colors.grey,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
             IconButton(
               icon: const Icon(
                 Icons.refresh,
@@ -92,31 +212,95 @@ class _SomViewerState extends State<SomViewer> {
               tooltip: 'Refresh live mirror',
               onPressed: () {
                 setState(() {
+                  _lastFrameSeq = null;
                   _liveTimestamp = DateTime.now().millisecondsSinceEpoch;
                 });
+                _pollNextLiveFrame();
               },
             ),
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: MetaTheme.surfaceCardElevated,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: MetaTheme.surfaceCardBorder),
+            const SizedBox(width: 4),
+          ],
+          if (widget.workflow == 'w1' && !isLiveDriver) ...[
+            InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: () => openExternalUrl('https://www.tradingview.com/chart/'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: MetaTheme.surfaceCardElevated,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: MetaTheme.surfaceCardBorder),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.open_in_new,
+                      size: 11,
+                      color: MetaTheme.metaBlueDark,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'TradingView.com',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: MetaTheme.metaBlueDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _layerButton(
-                  layer: ViewerLayer.grounding,
-                  label: 'SAM Grounding',
-                  active: _activeLayer == ViewerLayer.grounding,
-                ),
-                _layerButton(
-                  layer: ViewerLayer.device,
-                  label: isLiveDriver ? 'Live Mirror' : 'Device View',
-                  active: _activeLayer == ViewerLayer.device,
-                ),
-              ],
+            const SizedBox(width: 6),
+          ],
+          // Single unified tab indicating active mode: Live Mirror for ADB/Desktop, SAM Grounding or Live Browser for simulated canvas
+          InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: (widget.workflow == 'w1' && !isLiveDriver)
+                ? () {
+                    setState(() {
+                      _showLiveBrowser = !_showLiveBrowser;
+                    });
+                  }
+                : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: _showLiveBrowser ? MetaTheme.emeraldVerified : MetaTheme.metaBlue,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isShowingLiveMirror
+                        ? Icons.phone_android_rounded
+                        : (_showLiveBrowser ? Icons.public : Icons.radar),
+                    size: 13,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    isShowingLiveMirror
+                        ? 'Live Mirror'
+                        : (_showLiveBrowser ? 'Live Browser View' : 'SAM Grounding'),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (widget.workflow == 'w1' && !isLiveDriver) ...[
+                    const SizedBox(width: 5),
+                    Icon(
+                      _showLiveBrowser ? Icons.swap_horiz : Icons.touch_app,
+                      size: 11,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ],
@@ -193,9 +377,69 @@ class _SomViewerState extends State<SomViewer> {
               ),
             ),
 
+          if (_showLiveBrowser && widget.workflow == 'w1' && !isLiveDriver)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: MetaTheme.metaBlue.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: MetaTheme.metaBlueDark.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.public,
+                    size: 16,
+                    color: MetaTheme.metaBlueDark,
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'LIVE BROWSER ACTIVE (TradingView HTML5 Canvas): Notice 0 DOM elements exist inside the chart. '
+                      'Playwright locator clicks fail here. Click the badge above to toggle Meta SAM 3.1 visual grounding.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _showLiveBrowser = false;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: MetaTheme.metaBlueDark,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'View SAM Grounding',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Grounding canvas display - Matched in height to Run control
           Container(
-            height: isObstructed || isHealed ? 390 : 442,
+            height: (isObstructed || isHealed || (_showLiveBrowser && widget.workflow == 'w1' && !isLiveDriver))
+                ? 350
+                : ((widget.states.length > 1 && !isShowingLiveMirror) ? 398 : 442),
             width: double.infinity,
             decoration: BoxDecoration(
               color: MetaTheme.obsidianBg,
@@ -212,64 +456,90 @@ class _SomViewerState extends State<SomViewer> {
                 children: [
                   Center(
                     child: isShowingLiveMirror
-                        ? Image.network(
-                            liveUrl,
-                            fit: BoxFit.contain,
-                            gaplessPlayback: true,
-                            loadingBuilder: (context, child, progress) =>
-                                progress == null
-                                ? child
-                                : const Center(
+                        ? (_liveFrameBytes != null
+                            ? Image.memory(
+                                _liveFrameBytes!,
+                                fit: BoxFit.contain,
+                                gaplessPlayback: true,
+                                filterQuality: FilterQuality.medium,
+                              )
+                            : Image.network(
+                                liveUrl,
+                                fit: BoxFit.contain,
+                                gaplessPlayback: true,
+                                filterQuality: FilterQuality.medium,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) {
+                                    _hasLoadedLiveFrame = true;
+                                    return child;
+                                  }
+                                  if (_hasLoadedLiveFrame) {
+                                    return child;
+                                  }
+                                  return const Center(
                                     child: CircularProgressIndicator(),
+                                  );
+                                },
+                                errorBuilder: (context, error, stack) => Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.phone_android,
+                                        size: 36,
+                                        color: theme.disabledColor,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'No live frame for the ${widget.driver} target.',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Run on a connected target, then refresh.',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                    ],
                                   ),
-                            errorBuilder: (context, error, stack) => Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.phone_android,
-                                    size: 36,
-                                    color: theme.disabledColor,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'No live frame for the ${widget.driver} target.',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Run on a connected target, then refresh.',
-                                    style: theme.textTheme.bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : Image.network(
-                            activeDisplayUrl,
-                            fit: BoxFit.contain,
-                            gaplessPlayback: true,
-                            loadingBuilder: (context, child, progress) =>
-                                progress == null
-                                ? child
-                                : const Center(
+                                ),
+                              ))
+                        : (_showLiveBrowser && widget.workflow == 'w1'
+                            ? LiveBrowserWidget(
+                                url: '/tradingview_live.html',
+                                title: 'TradingView BTC/USD Real-Time Perpetual Market',
+                                currentState: widget.selectedState,
+                              )
+                            : Image.network(
+                                activeDisplayUrl,
+                                fit: BoxFit.contain,
+                                gaplessPlayback: true,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) {
+                                    _hasLoadedLiveFrame = true;
+                                    return child;
+                                  }
+                                  if (_hasLoadedLiveFrame) {
+                                    return child;
+                                  }
+                                  return const Center(
                                     child: CircularProgressIndicator(),
+                                  );
+                                },
+                                errorBuilder: (context, error, stack) => Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.broken_image_outlined,
+                                        size: 36,
+                                        color: theme.disabledColor,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text('Frame unavailable for this state.'),
+                                    ],
                                   ),
-                            errorBuilder: (context, error, stack) => Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.broken_image_outlined,
-                                    size: 36,
-                                    color: theme.disabledColor,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text('Frame unavailable for this state.'),
-                                ],
-                              ),
-                            ),
-                          ),
+                                ),
+                              )),
                   ),
                   // Overlay telemetry tag
                   Positioned(
@@ -290,36 +560,45 @@ class _SomViewerState extends State<SomViewer> {
                           if (isShowingLiveMirror) ...[
                             Icon(
                               widget.driver == 'adb'
-                                  ? Icons.phone_android
-                                  : Icons.desktop_mac,
+                                    ? Icons.phone_android
+                                    : Icons.desktop_mac,
                               size: 12,
                               color: MetaTheme.metaBlueDark,
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              'Live mirror · ${widget.driver.toUpperCase()} · tap refresh to update',
+                              'Live mirror · ${widget.driver.toUpperCase()}${widget.driver == 'adb' ? ' (Samsung S25 Ultra)' : ''} · ${_liveStreaming ? "High-FPS Stream" : "Paused"}',
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
                             ),
-                          ] else ...[
-                            Icon(
-                              _activeLayer == ViewerLayer.grounding
-                                  ? Icons.blur_on
-                                  : Icons.screenshot_monitor,
+                          ] else if (_showLiveBrowser && widget.workflow == 'w1') ...[
+                            const Icon(
+                              Icons.public,
                               size: 12,
-                              color: _activeLayer == ViewerLayer.grounding
-                                  ? MetaTheme.emeraldVerified
-                                  : Colors.white70,
+                              color: MetaTheme.emeraldVerified,
                             ),
                             const SizedBox(width: 5),
-                            Text(
-                              _activeLayer == ViewerLayer.grounding
-                                  ? 'Grounding · SAM 3.1 masks'
-                                  : 'Device View · Clean screen',
-                              style: const TextStyle(
+                            const Text(
+                              'Live Browser · Real-Time WebGL/HTML5 Canvas · TradingView BTC/USD',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ] else ...[
+                            const Icon(
+                              Icons.blur_on,
+                              size: 12,
+                              color: MetaTheme.emeraldVerified,
+                            ),
+                            const SizedBox(width: 5),
+                            const Text(
+                              'Grounding · SAM 3.1 + PPT Laser Reticle',
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -330,34 +609,212 @@ class _SomViewerState extends State<SomViewer> {
                       ),
                     ),
                   ),
+
+                  // PPT Laser pointer indicator (for non-Android simulation & canvas)
+                  if (!isShowingLiveMirror && !_showLiveBrowser)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1528).withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: MetaTheme.coralAlert.withValues(alpha: 0.5)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.gps_fixed, size: 11, color: MetaTheme.coralAlert),
+                            SizedBox(width: 4),
+                            Text(
+                              'PPT LASER CENTROID ✦ ACTIVE',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: MetaTheme.coralAlert,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
+
+          // Stage Timeline Scrubber
+          if (widget.states.length > 1 && !isShowingLiveMirror && !_showLiveBrowser) ...[
+            const SizedBox(height: 10),
+            _buildTimelineScrubber(),
+          ],
+          if (_showLiveBrowser && widget.workflow == 'w1' && !isLiveDriver) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: MetaTheme.surfaceCardElevated,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: MetaTheme.surfaceCardBorder),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.show_chart, size: 14, color: MetaTheme.emeraldVerified),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'INTERACTIVE LIVE CANVAS: Real-time Binance BTC/USDT Perpetual Market • Pan, zoom, and test clicks',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => openExternalUrl('https://www.tradingview.com/chart/'),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Open Full Screen',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: MetaTheme.metaBlueDark,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(Icons.open_in_new, size: 11, color: MetaTheme.metaBlueDark),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _layerButton({
-    required ViewerLayer layer,
-    required String label,
-    required bool active,
-  }) {
-    return InkWell(
-      onTap: () => setState(() => _activeLayer = layer),
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? MetaTheme.metaBlue : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            color: active ? Colors.white : MetaTheme.inkSecondary,
+  Widget _buildTimelineScrubber() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: MetaTheme.surfaceCardElevated,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MetaTheme.surfaceCardBorder),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.timeline_rounded,
+            size: 14,
+            color: MetaTheme.inkSecondary,
+          ),
+          const SizedBox(width: 6),
+          const Text(
+            'STAGE:',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: MetaTheme.inkSecondary,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final state in widget.states) ...[
+                    _buildTimelineChip(state),
+                    const SizedBox(width: 6),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineChip(String state) {
+    final isSelected = widget.selectedState == state;
+    final isObstruction = state.contains('modal_blocked');
+    final isRecovery = state.contains('recovered');
+    final isFinal = state.contains('final');
+
+    String label;
+    IconData icon;
+    Color activeColor;
+
+    if (state == 'initial') {
+      label = 'T0 · Initial';
+      icon = Icons.play_circle_outline;
+      activeColor = MetaTheme.metaBlue;
+    } else if (isObstruction) {
+      label = 'T2 · ⚠️ Blocker';
+      icon = Icons.report_problem;
+      activeColor = MetaTheme.coralAlert;
+    } else if (isRecovery) {
+      label = 'T2 · ✓ Healed';
+      icon = Icons.auto_fix_high;
+      activeColor = MetaTheme.emeraldVerified;
+    } else if (isFinal) {
+      final stepMatch = RegExp(r'step_(\d+)').firstMatch(state);
+      final stepNum = stepMatch != null ? stepMatch.group(1) : '4';
+      label = 'T$stepNum · ✦ Verified';
+      icon = Icons.verified;
+      activeColor = MetaTheme.emeraldVerified;
+    } else {
+      final stepMatch = RegExp(r'step_(\d+)').firstMatch(state);
+      final stepNum = stepMatch != null ? stepMatch.group(1) : '1';
+      label = 'T$stepNum · Step $stepNum';
+      icon = Icons.adjust;
+      activeColor = MetaTheme.metaBlue;
+    }
+
+    final chipColor = isSelected ? activeColor : MetaTheme.inkSecondary;
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: () => widget.onSelectState(state),
+        borderRadius: BorderRadius.circular(6),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? activeColor.withValues(alpha: 0.18)
+                : MetaTheme.surfaceCard,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isSelected ? activeColor : MetaTheme.surfaceCardBorder,
+              width: isSelected ? 1.5 : 1.0,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: chipColor),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? Colors.white : MetaTheme.inkSecondary,
+                ),
+              ),
+            ],
           ),
         ),
       ),

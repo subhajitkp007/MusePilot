@@ -9,7 +9,7 @@ import 'package:musepilot_hud/core/api_client.dart';
 import 'package:musepilot_hud/features/dashboard/som_viewer.dart';
 
 void main() {
-  testWidgets('SomViewer renders streamlined 2-toggle options and switches', (
+  testWidgets('SomViewer automatically displays Live Mirror single tab for adb driver', (
     tester,
   ) async {
     final client = MockClient((request) async {
@@ -33,19 +33,90 @@ void main() {
       ),
     );
 
-    // Verify exactly 2 streamlined tabs are displayed (SAM Grounding & Live Mirror)
-    expect(find.text('SAM Grounding'), findsOneWidget);
+    // Verify single tab is Live Mirror for ADB
     expect(find.text('Live Mirror'), findsOneWidget);
-    expect(find.text('Raw frame'), findsNothing);
+    expect(find.text('SAM Grounding'), findsNothing);
 
-    // Initial state is SAM Grounding (no refresh button)
-    expect(find.byIcon(Icons.refresh), findsNothing);
-
-    // Tap Live Mirror -> refresh icon becomes visible for live adb target
-    await tester.tap(find.text('Live Mirror'));
-    await tester.pumpAndSettle();
-
+    // Refresh icon and streaming badge are visible for live adb target
     expect(find.byIcon(Icons.refresh), findsOneWidget);
     expect(find.textContaining('Live mirror · ADB'), findsOneWidget);
+  });
+
+  testWidgets('SomViewer automatically displays SAM Grounding single tab for simulated driver', (
+    tester,
+  ) async {
+    final client = MockClient((request) async {
+      return http.Response('fake-image-bytes', 200);
+    });
+    final api = MusePilotApi(baseUrl: 'http://localhost:8501', client: client);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SomViewer(
+            api: api,
+            workflow: 'w1',
+            states: const ['initial', 'step_1', 'step_2_final'],
+            selectedState: 'initial',
+            onSelectState: (_) {},
+            traceId: 'trace-123',
+            driver: 'simulated',
+          ),
+        ),
+      ),
+    );
+
+    // Verify single tab is SAM Grounding for simulated driver
+    expect(find.text('SAM Grounding'), findsOneWidget);
+    expect(find.text('Live Mirror'), findsNothing);
+
+    // Refresh icon is not present for simulated driver
+    expect(find.byIcon(Icons.refresh), findsNothing);
+    expect(find.textContaining('Grounding · SAM 3.1'), findsOneWidget);
+  });
+
+  testWidgets('SomViewer can toggle between SAM Grounding and Live Browser View for w1', (
+    tester,
+  ) async {
+    final client = MockClient((request) async {
+      return http.Response('fake-image-bytes', 200);
+    });
+    final api = MusePilotApi(baseUrl: 'http://localhost:8501', client: client);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SomViewer(
+            api: api,
+            workflow: 'w1',
+            states: const ['initial', 'step_1', 'step_2_final'],
+            selectedState: 'initial',
+            onSelectState: (_) {},
+            traceId: 'trace-123',
+            driver: 'simulated',
+          ),
+        ),
+      ),
+    );
+
+    // Initial state is SAM Grounding
+    expect(find.text('SAM Grounding'), findsOneWidget);
+    expect(find.text('TradingView.com'), findsOneWidget);
+
+    // Tap the tab to toggle into Live Browser View
+    await tester.tap(find.text('SAM Grounding'));
+    await tester.pumpAndSettle();
+
+    // Now showing Live Browser View
+    expect(find.text('Live Browser View'), findsOneWidget);
+    expect(find.text('SAM Grounding'), findsNothing);
+    expect(find.textContaining('Live Browser · Real-Time WebGL/HTML5 Canvas'), findsOneWidget);
+
+    // Tap again to toggle back to SAM Grounding
+    await tester.tap(find.text('Live Browser View'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SAM Grounding'), findsOneWidget);
+    expect(find.text('Live Browser View'), findsNothing);
   });
 }

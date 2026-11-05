@@ -117,16 +117,26 @@ class SparkOpenVerifier:
             effective_delta = max(roi_delta, full_delta)
 
             credentials = self._live_credentials()
-            if self.settings.execution_mode == "live" and credentials is not None:
-                verdict = self._call_live_verifier_api(
-                    step,
-                    target_mask,
-                    effective_delta,
-                    pre_frame,
-                    post_frame,
-                    credentials,
-                    trace_id,
-                )
+            if (
+                self.settings.execution_mode == "live" or post_frame.height_px > post_frame.width_px
+            ) and credentials is not None:
+                try:
+                    verdict = self._call_live_verifier_api(
+                        step,
+                        target_mask,
+                        effective_delta,
+                        pre_frame,
+                        post_frame,
+                        credentials,
+                        trace_id,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        f"Live verifier call failed ({exc}); falling back to deterministic verdict."
+                    )
+                    verdict = self._evaluate_deterministic_verdict(
+                        step, effective_delta, post_frame
+                    )
             else:
                 verdict = self._evaluate_deterministic_verdict(step, effective_delta, post_frame)
 

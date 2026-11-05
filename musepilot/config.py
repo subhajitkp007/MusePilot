@@ -284,10 +284,10 @@ class MusePilotSettings(BaseSettings):
         description="Enable/disable API rate limiting (override via MUSEPILOT_RATE_LIMIT_ENABLED)",
     )
     rate_limit_read_per_minute: int = Field(
-        default=120,
+        default=600,
         gt=0,
         le=10000,
-        description="Read-endpoint sliding-window rate limit per IP per minute",
+        description="Read-endpoint sliding-window rate limit per IP per minute (default: 600 req/min)",
     )
     rate_limit_mutation_per_minute: int = Field(
         default=30,

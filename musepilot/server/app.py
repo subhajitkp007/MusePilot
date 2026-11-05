@@ -9,11 +9,15 @@ import hmac
 import io
 import json
 import re
+import subprocess
 import tempfile
+import threading
+import time
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
 from pydantic import ValidationError
 from starlette.applications import Starlette
 from starlette.concurrency import run_in_threadpool
@@ -87,7 +91,7 @@ class SecurityHeadersMiddleware:
                     headers.append(
                         (
                             b"permissions-policy",
-                            b"accelerometer=(), camera=(), geolocation=(), gyroscope=(), payment=()",
+                            b"accelerometer=(), camera=(), geolocation=(), gyroscope=(), payment=(), microphone=(self)",
                         )
                     )
                 if b"x-xss-protection" not in header_names:
@@ -98,8 +102,10 @@ class SecurityHeadersMiddleware:
                         b"script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' 'unsafe-inline' https://www.gstatic.com; "
                         b"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
                         b"img-src 'self' data: blob: https://www.gstatic.com; "
-                        b"connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://www.gstatic.com https://fonts.gstatic.com; "
-                        b"font-src 'self' data: https://fonts.gstatic.com;"
+                        b"connect-src 'self' blob: data: ws: wss: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://www.gstatic.com https://fonts.gstatic.com; "
+                        b"font-src 'self' data: https://fonts.gstatic.com; "
+                        b"media-src 'self' blob: data:; "
+                        b"worker-src 'self' blob:;"
                     )
                     headers.append((b"content-security-policy", csp))
                 message["headers"] = headers
@@ -228,6 +234,32 @@ def _error(message: str, status_code: int) -> JSONResponse:
     return JSONResponse({"detail": message}, status_code=status_code)
 
 
+def _normalize_audio_to_wav(input_path: Path, output_path: Path) -> bool:
+    """Normalize input audio (WAV, WebM, etc.) to 16kHz mono PCM WAV via bundled imageio_ffmpeg."""
+    try:
+        import imageio_ffmpeg
+
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        cmd = [
+            ffmpeg_exe,
+            "-y",
+            "-i",
+            str(input_path),
+            "-ar",
+            "16000",
+            "-ac",
+            "1",
+            "-c:a",
+            "pcm_s16le",
+            str(output_path),
+        ]
+        res = subprocess.run(cmd, capture_output=True, timeout=15)  # noqa: S603
+        return res.returncode == 0 and output_path.exists() and output_path.stat().st_size > 0
+    except Exception as exc:
+        logger.warning(f"Audio ffmpeg conversion failed: {exc}")
+        return False
+
+
 def _execute_run_blocking(request: RunRequest) -> RunTrace:
     """Run a workflow synchronously inside a worker thread."""
     driver = get_device_driver(request.driver)
@@ -264,11 +296,31 @@ def _state_timeline(trace: RunTrace | None, workflow_id: str) -> list[str]:
 
 
 def _active_target(trace: RunTrace | None, state_label: str) -> int:
-    """Select the highlighted mask for a timeline state."""
+    """Select the highlighted mask for a timeline state based on active workflow step."""
     if "modal" in state_label:
         return 4
-    if trace is not None and trace.records:
-        return trace.records[-1].step.target_mask_id
+
+    # Extract step number from state_label (e.g. "step_1", "step_2", "step_3_final")
+    step_match = re.search(r"step_(\d+)", state_label)
+    if step_match:
+        step_num = int(step_match.group(1))
+        if trace is not None:
+            for rec in trace.records:
+                if rec.step.step_id == step_num:
+                    return rec.step.target_mask_id
+            for st in trace.plan.steps:
+                if st.step_id == step_num:
+                    return st.target_mask_id
+        return step_num
+
+    if "final" in state_label:
+        if trace is not None and trace.records:
+            return trace.records[-1].step.target_mask_id
+        return 4
+
+    # Initial state -> Step 1 target
+    if trace is not None and trace.plan.steps:
+        return trace.plan.steps[0].target_mask_id
     return 1
 
 
@@ -666,15 +718,17 @@ async def transcribe_audio(request: Request) -> JSONResponse:
     workflow_id = form.get("workflow_id", "w2")
     if not isinstance(upload, UploadFile) or not upload.filename:
         return _error("Multipart field 'audio' with a WAV file is required.", 400)
-    if not upload.filename.lower().endswith(".wav"):
+    filename_lower = upload.filename.lower()
+    if not (filename_lower.endswith(".wav") or filename_lower.endswith(".webm")):
         return _error("Voice transcribe requires a WAV file.", 400)
     if workflow_id not in ("w1", "w2"):
         return _error("Unknown workflow_id; expected 'w1' or 'w2'.", 400)
     try:
         with tempfile.TemporaryDirectory(prefix="musepilot_voice_") as tmpdir:
-            audio_path = Path(tmpdir) / "command.wav"
+            input_ext = ".webm" if filename_lower.endswith(".webm") else ".wav"
+            input_path = Path(tmpdir) / f"input{input_ext}"
             total_bytes = 0
-            with audio_path.open("wb") as f:
+            with input_path.open("wb") as f:
                 while chunk := await upload.read(1024 * 1024):
                     total_bytes += len(chunk)
                     if total_bytes > max_bytes:
@@ -686,6 +740,16 @@ async def transcribe_audio(request: Request) -> JSONResponse:
                     f.write(chunk)
             if total_bytes == 0:
                 return _error("Uploaded audio file is empty.", 400)
+
+            # Normalize to 16kHz mono PCM WAV for Meta Voice Transcribe API
+            audio_path = Path(tmpdir) / "command.wav"
+            if input_ext == ".webm":
+                if not _normalize_audio_to_wav(input_path, audio_path):
+                    return _error("Could not decode audio format.", 400)
+            else:
+                if not _normalize_audio_to_wav(input_path, audio_path):
+                    audio_path = input_path
+
             transcript = await run_in_threadpool(
                 MuseVoiceTranscribeClient().transcribe_command,
                 workflow_id,
@@ -828,20 +892,167 @@ async def get_som_frame(request: Request) -> Response | JSONResponse:
     return _png_response(overlay)
 
 
-async def get_live_frame(request: Request) -> Response | JSONResponse:
-    """Capture and return the current live screen frame from the target device as PNG."""
-    driver_name = request.query_params.get("driver", "simulated").lower()
-    serial = request.query_params.get("serial")
-    if driver_name not in ("simulated", "desktop", "adb"):
-        return _error("Unknown driver; expected 'simulated', 'desktop', or 'adb'.", 400)
-    try:
-        driver = get_device_driver(driver_name, serial=serial)  # type: ignore[arg-type]
+class LiveMirrorManager:
+    """High-framerate in-memory double-buffered streamer for live device mirrors."""
+
+    def __init__(self) -> None:
+        self._cache: dict[str, tuple[bytes, str, float, int]] = {}
+        self._lock = threading.Lock()
+        self._active_until: dict[str, float] = {}
+        self._workers: dict[str, list[threading.Thread]] = {}
+        self._seq: dict[str, int] = {}
+
+    def get_frame(
+        self,
+        driver_name: str,
+        serial: str | None = None,
+        img_format: str = "png",
+        max_age: float = 0.08,
+    ) -> tuple[bytes, str]:
+        data, media_type, _seq = self.get_frame_with_seq(
+            driver_name=driver_name,
+            serial=serial,
+            img_format=img_format,
+            max_age=max_age,
+        )
+        return data, media_type
+
+    def get_frame_with_seq(
+        self,
+        driver_name: str,
+        serial: str | None = None,
+        img_format: str = "png",
+        max_age: float = 0.08,
+    ) -> tuple[bytes, str, int]:
+        key = f"{driver_name}:{serial or ''}:{img_format}"
+        now = time.time()
+        self._active_until[key] = now + 20.0
+
+        if driver_name in ("adb", "desktop"):
+            self._ensure_worker(key, driver_name, serial, img_format)
+
+        with self._lock:
+            cached = self._cache.get(key)
+            if cached is not None:
+                if driver_name in ("adb", "desktop") or (now - cached[2]) < max_age:
+                    return cached[0], cached[1], cached[3]
+
+        return self._capture_and_store(key, driver_name, serial, img_format)
+
+    def _ensure_worker(
+        self, key: str, driver_name: str, serial: str | None, img_format: str
+    ) -> None:
+        with self._lock:
+            existing = [t for t in self._workers.get(key, []) if t.is_alive()]
+            target_workers = 2 if driver_name == "adb" else 1
+            if len(existing) >= target_workers:
+                self._workers[key] = existing
+                return
+
+            needed = target_workers - len(existing)
+            for idx in range(needed):
+                stagger_s = 0.16 * idx
+
+                def loop(delay: float = stagger_s) -> None:
+                    if delay > 0:
+                        time.sleep(delay)
+                    try:
+                        driver = get_device_driver(driver_name, serial=serial)
+                    except Exception as exc:
+                        logger.debug(f"Live mirror worker driver init failed: {exc}")
+                        return
+                    sleep_interval = 0.015 if driver_name == "adb" else 0.04
+                    while time.time() < self._active_until.get(key, 0):
+                        try:
+                            self._capture_and_store(
+                                key, driver_name, serial, img_format, driver=driver
+                            )
+                        except Exception as exc:
+                            logger.debug(f"Live mirror background capture: {exc}")
+                            time.sleep(0.15)
+                        time.sleep(sleep_interval)
+
+                t = threading.Thread(
+                    target=loop, daemon=True, name=f"live-mirror-{key}-{len(existing) + idx}"
+                )
+                existing.append(t)
+                t.start()
+            self._workers[key] = existing
+
+    def _capture_and_store(
+        self,
+        key: str,
+        driver_name: str,
+        serial: str | None,
+        img_format: str,
+        driver: Any | None = None,
+    ) -> tuple[bytes, str, int]:
+        if driver is None:
+            driver = get_device_driver(driver_name, serial=serial)
         if driver is not None:
-            frame = await run_in_threadpool(driver.capture_frame, "live_preview")
+            if img_format == "jpeg" and hasattr(driver, "capture_preview_image"):
+                image = driver.capture_preview_image(max_width=540)
+            else:
+                frame = driver.capture_frame("live_preview")
+                image = frame.image
         else:
             capture = ScreenCaptureEngine()
-            frame = await run_in_threadpool(capture.render_canvas_state, "w1", "initial")
-        return _png_response(frame.image)
+            frame = capture.render_canvas_state("w1", "initial")
+            image = frame.image
+
+        buffer = io.BytesIO()
+        if img_format == "jpeg":
+            if image.mode != "RGB":
+                image = image.convert("RGB")
+            if image.width > 540:
+                h = int(image.height * (540 / image.width))
+                image = image.resize((540, h), Image.Resampling.BILINEAR)
+            image.save(buffer, format="JPEG", quality=75, optimize=False)
+            media_type = "image/jpeg"
+        else:
+            image.save(buffer, format="PNG")
+            media_type = "image/png"
+
+        data = buffer.getvalue()
+        now = time.time()
+        with self._lock:
+            seq = self._seq.get(key, 0) + 1
+            self._seq[key] = seq
+            self._cache[key] = (data, media_type, now, seq)
+        return data, media_type, seq
+
+
+GLOBAL_LIVE_MIRROR = LiveMirrorManager()
+
+
+async def get_live_frame(request: Request) -> Response | JSONResponse:
+    """Capture and return the current live screen frame from the target device as PNG or JPEG."""
+    driver_name = request.query_params.get("driver", "simulated").lower()
+    serial = request.query_params.get("serial")
+    img_format = request.query_params.get("format", "png").lower()
+    if driver_name not in ("simulated", "desktop", "adb"):
+        return _error("Unknown driver; expected 'simulated', 'desktop', or 'adb'.", 400)
+    if img_format not in ("png", "jpeg", "jpg"):
+        return _error("Unknown format; expected 'png' or 'jpeg'.", 400)
+    normalized_format = "jpeg" if img_format in ("jpeg", "jpg") else "png"
+    try:
+        data, media_type, seq = await run_in_threadpool(
+            GLOBAL_LIVE_MIRROR.get_frame_with_seq,
+            driver_name,
+            serial,
+            normalized_format,
+        )
+        return Response(
+            data,
+            media_type=media_type,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0",
+                "X-Frame-Seq": str(seq),
+                "Access-Control-Expose-Headers": "X-Frame-Seq",
+            },
+        )
     except Exception as exc:
         logger.warning(f"Live frame capture failed: {exc}")
         return _error(f"Live capture failed: {exc}", 502)
@@ -999,6 +1210,9 @@ def create_app(settings: Any | None = None) -> Starlette:
     routes: list[Route | WebSocketRoute | Mount] = [
         Route("/api/auth/token", get_auth_token),
         Route("/api/health", get_health),
+        Route("/api/health/", get_health),
+        Route("/health", get_health),
+        Route("/health/", get_health),
         Route("/api/config", get_config),
         Route("/api/workflows", list_workflows),
         Route("/api/runs", create_run, methods=["POST"]),

@@ -17,12 +17,16 @@ class StepGraphView extends StatefulWidget {
     this.records = const [],
     this.planSummary,
     this.isRunning = false,
+    this.selectedStepId,
+    this.onSelectStep,
   });
 
   final List<StepNode> steps;
   final List<StepExecutionRecord> records;
   final String? planSummary;
   final bool isRunning;
+  final int? selectedStepId;
+  final ValueChanged<int>? onSelectStep;
 
   @override
   State<StepGraphView> createState() => _StepGraphViewState();
@@ -33,6 +37,9 @@ class _StepGraphViewState extends State<StepGraphView>
   int? _selectedStepId;
   late AnimationController _pulseController;
 
+  int get _activeStepId =>
+      widget.selectedStepId ?? _selectedStepId ?? widget.steps.first.stepId;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +47,16 @@ class _StepGraphViewState extends State<StepGraphView>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant StepGraphView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isRunning &&
+        widget.records.length > oldWidget.records.length &&
+        widget.records.isNotEmpty) {
+      _selectedStepId = widget.records.last.step.stepId;
+    }
   }
 
   @override
@@ -55,7 +72,7 @@ class _StepGraphViewState extends State<StepGraphView>
     }
 
     final selectedStep = widget.steps.firstWhere(
-      (s) => s.stepId == (_selectedStepId ?? widget.steps.first.stepId),
+      (s) => s.stepId == _activeStepId,
       orElse: () => widget.steps.first,
     );
 
@@ -180,8 +197,7 @@ class _StepGraphViewState extends State<StepGraphView>
       orElse: () => null,
     );
 
-    final isSelected =
-        (_selectedStepId ?? widget.steps.first.stepId) == step.stepId;
+    final isSelected = _activeStepId == step.stepId;
     final isVerified = record != null && record.verdict.passed;
     final isHealed = record != null && record.selfHealed;
     final isFailed = record != null && !record.verdict.passed;
@@ -215,6 +231,7 @@ class _StepGraphViewState extends State<StepGraphView>
     return InkWell(
       onTap: () {
         setState(() => _selectedStepId = step.stepId);
+        widget.onSelectStep?.call(step.stepId);
       },
       borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(

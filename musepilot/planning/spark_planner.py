@@ -48,10 +48,21 @@ class MuseSparkPlanner:
             replan=bool(replan_reason),
         ) as span:
             t0 = time.perf_counter()
-            if self.settings.execution_mode == "live" and self.settings.meta_api_key:
-                dag = self._call_live_planner_api(
-                    workflow_id, intent, mask_set, som_image, replan_reason, trace_id
-                )
+            use_live = (
+                self.settings.execution_mode == "live" or mask_set.height_px > mask_set.width_px
+            ) and bool(self.settings.meta_api_key)
+            if use_live:
+                try:
+                    dag = self._call_live_planner_api(
+                        workflow_id, intent, mask_set, som_image, replan_reason, trace_id
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        f"Live planner API failed ({exc}); falling back to deterministic DAG."
+                    )
+                    dag = self._build_deterministic_dag(
+                        workflow_id, intent, mask_set, replan_reason
+                    )
             else:
                 dag = self._build_deterministic_dag(workflow_id, intent, mask_set, replan_reason)
 
@@ -181,6 +192,51 @@ class MuseSparkPlanner:
         replan_reason: str | None,
     ) -> StepDAG:
         """Build a zero-coordinate StepDAG over the active SAM 3.1 MaskSet."""
+        intent_lower = intent.lower()
+        if "alarm" in intent_lower or "instagram" in intent_lower or "reels" in intent_lower:
+            steps: list[StepNode] = []
+            cur_id = 1
+            if "alarm" in intent_lower:
+                target_m = 1 if 1 in mask_set.valid_mask_ids else min(mask_set.valid_mask_ids)
+                steps.append(
+                    StepNode(
+                        step_id=cur_id,
+                        operation=ActionOp.CLICK,
+                        target_mask_id=target_m,
+                        expected_outcome="Active alarm toggle switch flips to disabled state, confirming 'All alarms are off'",
+                        reasoning=f"Mask #{target_m} segments the alarm toggle switch control to silence pending alarms.",
+                    )
+                )
+                cur_id += 1
+            if "instagram" in intent_lower or "reels" in intent_lower:
+                target_m = 2 if 2 in mask_set.valid_mask_ids else min(mask_set.valid_mask_ids)
+                steps.append(
+                    StepNode(
+                        step_id=cur_id,
+                        operation=ActionOp.CLICK,
+                        target_mask_id=target_m,
+                        expected_outcome="Instagram Reels viewer activates and initiates video playback",
+                        reasoning=f"Mask #{target_m} segments the Instagram Reels navigation tab.",
+                    )
+                )
+                cur_id += 1
+                steps.append(
+                    StepNode(
+                        step_id=cur_id,
+                        operation=ActionOp.VERIFY,
+                        target_mask_id=target_m,
+                        expected_outcome="Video motion verified via continuous frame pixel deltas",
+                        reasoning="Verify video playback is actively rendering in the Reels viewport.",
+                    )
+                )
+            return StepDAG(
+                workflow_id=workflow_id,
+                intent=intent,
+                model_id=self.settings.planner_model_id,
+                plan_summary="Mobile automation: disable active alarms and launch Instagram Reels playback",
+                steps=steps,
+            )
+
         if replan_reason and 4 in mask_set.valid_mask_ids and workflow_id.lower() == "w2":
             return StepDAG(
                 workflow_id=workflow_id,
@@ -219,36 +275,36 @@ class MuseSparkPlanner:
                 workflow_id="w1",
                 intent=intent,
                 model_id=self.settings.planner_model_id,
-                plan_summary="Calibrate WebGL/HTML5 simulation slider, enable adaptive damping, enter gain coefficient, and run benchmark",
+                plan_summary="On TradingView BTC/USD market chart, set 4H timeframe, enable EMA trend indicator, configure contract limit, and execute market order",
                 steps=[
                     StepNode(
                         step_id=1,
                         operation=ActionOp.CLICK,
                         target_mask_id=1,
-                        expected_outcome="Frequency slider handle shifts to 75% target position with emerald highlight",
-                        reasoning="Mask #1 segments the interactive frequency slider track on the simulation canvas.",
+                        expected_outcome="Timeframe interval selector updates to 'INTERVAL: 4H [BULLISH SWING // LOCKED]'",
+                        reasoning="Mask #1 segments the interactive timeframe interval selector on the TradingView HTML5 canvas.",
                     ),
                     StepNode(
                         step_id=2,
                         operation=ActionOp.CLICK,
                         target_mask_id=2,
-                        expected_outcome="Adaptive damping switch toggles to ENABLED state in bright green",
-                        reasoning="Mask #2 segments the adaptive damping toggle control.",
+                        expected_outcome="EMA indicator overlay toggles to 'EMA 20/50/200: ENABLED [GOLDEN CROSS]'",
+                        reasoning="Mask #2 segments the algorithmic indicator overlay toggle control.",
                     ),
                     StepNode(
                         step_id=3,
                         operation=ActionOp.TYPE,
                         target_mask_id=3,
-                        input_value="0.942",
-                        expected_outcome="Gain coefficient field displays 'GAIN_COEFF: 0.942 [LOCKED]'",
-                        reasoning="Mask #3 segments the parameter gain input box.",
+                        input_value="1.25",
+                        expected_outcome="Risk management field updates with 'CONTRACT_SIZE: 1.25 BTC [LIMIT $68,450.00]'",
+                        reasoning="Mask #3 segments the contract order size input field.",
                     ),
                     StepNode(
                         step_id=4,
                         operation=ActionOp.CLICK,
                         target_mask_id=4,
-                        expected_outcome="Simulation viewport converges with 'STATUS: CONVERGED // Q-FACTOR = 99.4%'",
-                        reasoning="Mask #4 segments the 'RUN BENCHMARK SIMULATION' execution button.",
+                        expected_outcome="Market order executes with status 'ORDER FILLED [100% VERIFIED]'",
+                        reasoning="Mask #4 segments the 'EXECUTE MARKET ORDER' trade dispatch button.",
                     ),
                 ],
             )

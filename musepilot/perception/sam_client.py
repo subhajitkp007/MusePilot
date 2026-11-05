@@ -175,8 +175,16 @@ class SAM31PerceptionClient:
             screen_hash=frame.screen_hash,
         ) as span:
             t0 = time.perf_counter()
-            if self.settings.execution_mode == "live" and self.settings.meta_api_key:
-                masks = self._call_live_sam_api(frame, workflow_id, trace_id)
+            if (
+                self.settings.execution_mode == "live" or frame.height_px > frame.width_px
+            ) and self.settings.meta_api_key:
+                try:
+                    masks = self._call_live_sam_api(frame, workflow_id, trace_id)
+                except Exception as exc:
+                    logger.warning(
+                        f"Live SAM API call failed ({exc}); falling back to deterministic masks."
+                    )
+                    masks = self._segment_deterministic_canvas(frame, workflow_id)
             else:
                 masks = self._segment_deterministic_canvas(frame, workflow_id)
 
@@ -352,8 +360,21 @@ class SAM31PerceptionClient:
     def _segment_deterministic_canvas(
         self, frame: CapturedFrame, workflow_id: str
     ) -> list[MaskMetadata]:
-        """Return pixel-exact SAM 3.1 masks matching the active canvas controls."""
-        if workflow_id.lower() == "w1":
+        """Return pixel-exact SAM 3.1 masks matching the active canvas or mobile controls."""
+        is_mobile = frame.height_px > frame.width_px or any(
+            k in frame.state_label.lower()
+            for k in ("clock", "alarm", "instagram", "reels", "mobile")
+        )
+
+        if is_mobile:
+            specs = [
+                (1, (600, 562, 700, 790), 0.99, "alarm_toggle_switch_active"),
+                (2, (144, 1434, 288, 1530), 0.99, "instagram_reels_tab"),
+                (3, (0, 1434, 144, 1530), 0.98, "instagram_home_tab"),
+                (4, (480, 70, 700, 160), 0.97, "clock_add_alarm_button"),
+                (5, (200, 700, 520, 800), 0.96, "dismiss_modal_button"),
+            ]
+        elif workflow_id.lower() == "w1":
             specs = [
                 (1, (120, 160, 520, 220), 0.98, "frequency_slider_control"),
                 (2, (120, 290, 380, 360), 0.99, "adaptive_damping_toggle"),

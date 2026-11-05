@@ -88,14 +88,24 @@ class ActionExecutor:
                         f"Operator declined destructive step {step.step_id}."
                     )
 
-            logical_point = translate_frame_px_to_os_logical(mask.centroid_px, mask_set.dpi_scale)
-            drag_destination = self._resolve_drag_destination(step, mask_set)
+            # ADB touch coordinates map 1:1 to physical device pixels.
+            # Only desktop macOS Retina requires dividing by display_dpi_scale (e.g. 2.0).
+            from musepilot.execution.device import AdbDeviceDriver
+
+            effective_dpi = (
+                1.0 if isinstance(device_driver, AdbDeviceDriver) else mask_set.dpi_scale
+            )
+            logical_point = translate_frame_px_to_os_logical(mask.centroid_px, effective_dpi)
+            drag_destination = self._resolve_drag_destination(step, mask_set, effective_dpi)
 
             if device_driver is not None:
                 self._dispatch_to_device(
                     device_driver, step.operation, logical_point, drag_destination, step.input_value
                 )
-                time.sleep(0.8)  # Let target OS touch animation and window transition settle
+                settle_seconds = 1.6 if isinstance(device_driver, AdbDeviceDriver) else 0.8
+                time.sleep(
+                    settle_seconds
+                )  # Let target OS touch animation and window transition settle
                 post_frame = device_driver.capture_frame(state_label=next_state_label)
             else:
                 # Render or capture the post-action visual state
@@ -112,7 +122,7 @@ class ActionExecutor:
                 operation=step.operation,
                 target_mask_id=step.target_mask_id,
                 frame_centroid_px=mask.centroid_px,
-                dpi_scale=mask_set.dpi_scale,
+                dpi_scale=effective_dpi,
                 os_logical_point=logical_point,
                 drag_to_logical_point=drag_destination,
                 redacted_input_value=redact_step_value(
@@ -126,7 +136,7 @@ class ActionExecutor:
             return post_frame, receipt
 
     def _resolve_drag_destination(
-        self, step: StepNode, mask_set: MaskSet
+        self, step: StepNode, mask_set: MaskSet, dpi_scale: float | None = None
     ) -> tuple[float, float] | None:
         """Resolve a drag destination mask into OS logical coordinates (None unless dragging)."""
         if step.operation != ActionOp.DRAG or step.drag_to_mask_id is None:
@@ -136,7 +146,8 @@ class ActionExecutor:
             raise ValueError(
                 f"Drag destination mask #{step.drag_to_mask_id} not found in active MaskSet."
             )
-        return translate_frame_px_to_os_logical(dest_mask.centroid_px, mask_set.dpi_scale)
+        eff_dpi = dpi_scale or mask_set.dpi_scale
+        return translate_frame_px_to_os_logical(dest_mask.centroid_px, eff_dpi)
 
     def _dispatch_to_device(
         self,

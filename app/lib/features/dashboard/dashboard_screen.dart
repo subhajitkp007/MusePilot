@@ -50,9 +50,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   HealthReport? _health;
   List<WorkflowInfo> _workflows = const [];
-  String _workflow = 'w1';
+  String _workflow = kSolutionScenarios.first.workflowId;
   bool _injectModal = false;
-  String _driver = 'simulated';
+  String _driver = (kSolutionScenarios.first.id == 'mobile_adb' ? 'adb' : 'simulated');
   String _selectedScenarioId = kSolutionScenarios.first.id;
 
   late final TextEditingController _intentController;
@@ -156,6 +156,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _error = null;
       _spans = const [];
       _liveRecords = const [];
+      _state = 'initial';
     });
     final feed = <Map<String, dynamic>>[];
     try {
@@ -176,8 +177,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             feed.add(span);
             setState(() => _spans = List.of(feed));
           case RunStepRecordEvent(:final record):
+            final targetPrefix = 'step_${record.step.stepId}';
+            final nextState = _states.firstWhere(
+              (s) => s.startsWith(targetPrefix),
+              orElse: () => targetPrefix,
+            );
             setState(() {
               _liveRecords = [..._liveRecords, record];
+              _state = nextState;
             });
           case RunCompleted(:final trace):
             await _adoptTrace(trace);
@@ -228,6 +235,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } on ApiException catch (e) {
       _fail(e.message);
     }
+  }
+
+  /// Extract step number from a state label (e.g. "step_2" -> 2).
+  int? _stepIdForState(String state) {
+    final match = RegExp(r'step_(\d+)').firstMatch(state);
+    if (match != null) {
+      return int.tryParse(match.group(1)!);
+    }
+    return null;
+  }
+
+  /// Handle selecting a step node in the DAG graph.
+  void _onSelectStep(int stepId) {
+    final match = _states.firstWhere(
+      (s) => s.startsWith('step_$stepId'),
+      orElse: () => 'step_$stepId',
+    );
+    setState(() => _state = match);
   }
 
   /// Load a historical trace from the history list.
@@ -618,6 +643,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             traceId: _trace?.traceId,
                             isRunning: _running,
                             driver: _driver,
+                            spans: _spans,
+                            liveRecords: _liveRecords,
                           );
 
                           if (isWide) {
@@ -656,6 +683,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               : (_trace?.records ?? const []),
                           planSummary: _trace?.plan.planSummary,
                           isRunning: _running,
+                          selectedStepId: _stepIdForState(_state),
+                          onSelectStep: _onSelectStep,
                         ),
                       ),
                     if (_trace?.plan.steps.isNotEmpty ?? false)

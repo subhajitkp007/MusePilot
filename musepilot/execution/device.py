@@ -8,6 +8,7 @@ import io
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import time
@@ -197,15 +198,68 @@ class AdbDeviceDriver(DeviceDriver):
         escaped = value.replace("%", "%25").replace(" ", "%s")
         self._run("shell", "input", "text", escaped)
 
-    def capture_frame(self, state_label: str = "initial") -> CapturedFrame:
-        """Capture the device screen via screencap as a hashed frame."""
+    def _grab_raw_or_png_image(self) -> Image.Image:
+        """Capture the device screen via zero-copy raw screencap (falling back to -p PNG)."""
+        try:
+            # Fast path: raw framebuffer dump (avoids mobile CPU PNG compression)
+            raw_proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
+                [self._adb, "-s", self._serial, "exec-out", "screencap"],
+                capture_output=True,
+                check=True,
+                timeout=15,
+            )
+            raw = raw_proc.stdout
+            if len(raw) >= 16:
+                w, h, _fmt = struct.unpack("<III", raw[:12])
+                expected_len = 16 + (w * h * 4)
+                if len(raw) == expected_len:
+                    return Image.frombuffer(
+                        "RGBA", (w, h), memoryview(raw)[16:], "raw", "RGBA", 0, 1
+                    ).convert("RGB")
+        except Exception as exc:
+            logger.debug(f"Raw screencap fast-path bypassed: {exc}")
+
         proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
             [self._adb, "-s", self._serial, "exec-out", "screencap", "-p"],
             capture_output=True,
             check=True,
             timeout=30,
         )
-        image = Image.open(io.BytesIO(proc.stdout)).convert("RGB")
+        return Image.open(io.BytesIO(proc.stdout)).convert("RGB")
+
+    def capture_preview_image(self, max_width: int = 540) -> Image.Image:
+        """Fast unhashed preview capture optimized for low-latency web HUD mirroring."""
+        try:
+            raw_proc = subprocess.run(  # noqa: S603 - fixed argv vector, shell disabled
+                [self._adb, "-s", self._serial, "exec-out", "screencap"],
+                capture_output=True,
+                check=True,
+                timeout=10,
+            )
+            raw = raw_proc.stdout
+            if len(raw) >= 16:
+                w, h, _fmt = struct.unpack("<III", raw[:12])
+                expected_len = 16 + (w * h * 4)
+                if len(raw) == expected_len:
+                    rgba = Image.frombuffer(
+                        "RGBA", (w, h), memoryview(raw)[16:], "raw", "RGBA", 0, 1
+                    )
+                    if w > max_width:
+                        target_h = int(h * (max_width / w))
+                        rgba = rgba.resize((max_width, target_h), Image.Resampling.BILINEAR)
+                    return rgba.convert("RGB")
+        except Exception as exc:
+            logger.debug(f"Preview raw screencap fast-path bypassed: {exc}")
+
+        img = self._grab_raw_or_png_image()
+        if img.width > max_width:
+            target_h = int(img.height * (max_width / img.width))
+            img = img.resize((max_width, target_h), Image.Resampling.BILINEAR)
+        return img
+
+    def capture_frame(self, state_label: str = "initial") -> CapturedFrame:
+        """Capture the device screen via fast raw screencap (falling back to -p PNG) as a hashed frame."""
+        image = self._grab_raw_or_png_image()
         width, height = image.size
         return CapturedFrame(
             image=image,
@@ -215,6 +269,109 @@ class AdbDeviceDriver(DeviceDriver):
             dpi_scale=1.0,  # Physical pixels match ADB input touch coordinates 1:1
             state_label=state_label,
         )
+
+    def keyevent(self, keycode: int | str) -> None:
+        """Dispatch a hardware keyevent (e.g. 3 for HOME, 4 for BACK)."""
+        require_live_input()
+        self._run("shell", "input", "keyevent", str(keycode))
+
+    def press_home(self) -> None:
+        """Navigate to Android home launcher."""
+        self.keyevent(3)
+
+    def press_back(self) -> None:
+        """Press Android system back button."""
+        self.keyevent(4)
+
+    def wake_screen(self) -> None:
+        """Ensure device display is awake and unlocked."""
+        require_live_input()
+        try:
+            res = self._run("shell", "dumpsys", "power")
+            if "mWakefulness=Asleep" in res.stdout or "mWakefulness=Dozing" in res.stdout:
+                self.keyevent(26)  # KEYCODE_POWER
+                time.sleep(0.3)
+                self.swipe(360, 1200, 360, 400, duration_ms=250)
+        except Exception as exc:
+            logger.warning(f"wake_screen encountered exception: {exc}")
+
+    def launch_intent(
+        self, action: str, data_uri: str | None = None, package: str | None = None
+    ) -> None:
+        """Launch an Android intent safely."""
+        require_live_input()
+        cmd = ["shell", "am", "start", "-a", action]
+        if data_uri:
+            cmd.extend(["-d", data_uri])
+        if package:
+            cmd.append(package)
+        self._run(*cmd)
+
+    def open_alarms(self) -> None:
+        """Launch the system Clock app directly to the Alarms tab."""
+        self.wake_screen()
+        self.launch_intent("android.intent.action.SHOW_ALARMS")
+        time.sleep(1.2)
+
+    def open_instagram(self) -> None:
+        """Launch Instagram application."""
+        self.wake_screen()
+        self.launch_intent(
+            "android.intent.action.MAIN",
+            package="com.instagram.android",
+        )
+        time.sleep(2.0)
+
+    def open_instagram_reels(self) -> None:
+        """Open Instagram directly to the Reels tab via verified deep link."""
+        self.wake_screen()
+        self.launch_intent(
+            "android.intent.action.VIEW",
+            data_uri="https://www.instagram.com/reels/",
+            package="com.instagram.android",
+        )
+        time.sleep(2.0)
+
+    def get_focused_package(self) -> str:
+        """Return the package name of the currently focused window."""
+        try:
+            res = self._run("shell", "dumpsys", "window")
+            for line in res.stdout.splitlines():
+                if "mCurrentFocus" in line:
+                    parts = line.split()
+                    for p in parts:
+                        if "/" in p:
+                            pkg = p.split("/")[0]
+                            return pkg.strip("{")
+        except Exception as exc:
+            logger.debug(f"get_focused_package inspection failed: {exc}")
+        return ""
+
+    def get_active_alarm_switches(self) -> list[tuple[int, int, int, int]]:
+        """Return bounding boxes [(x1, y1, x2, y2)] of any active/checked alarm toggles."""
+        switches: list[tuple[int, int, int, int]] = []
+        try:
+            self._run("shell", "uiautomator", "dump", "/sdcard/window_dump.xml")
+            cat_res = self._run("shell", "cat", "/sdcard/window_dump.xml")
+            nodes = re.findall(
+                r'<node[^>]*checked="true"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',
+                cat_res.stdout,
+            )
+            for x1, y1, x2, y2 in nodes:
+                switches.append((int(x1), int(y1), int(x2), int(y2)))
+        except Exception as exc:
+            logger.warning(f"Failed to inspect UI hierarchy for alarm switches: {exc}")
+        return switches
+
+    def is_video_playing(self, sample_interval_s: float = 0.4) -> bool:
+        """Sample two frames across sample_interval_s to verify live video/animation motion."""
+        f1 = self.capture_frame(state_label="motion_sample_1")
+        time.sleep(sample_interval_s)
+        f2 = self.capture_frame(state_label="motion_sample_2")
+        from musepilot.verification.spark_open_verifier import compute_roi_pixel_delta
+
+        delta = compute_roi_pixel_delta(f1, f2)
+        return delta > 0.05
 
 
 class DesktopDeviceDriver(DeviceDriver):

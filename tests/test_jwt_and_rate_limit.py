@@ -137,10 +137,28 @@ def test_rate_limit_exempts_health_endpoint():
     app = create_app(settings=settings)
     client = TestClient(app)
 
-    # Consecutive requests to /api/health should never 429
+    # Consecutive requests to /api/health and /health should never 429
+    for path in ("/api/health", "/api/health/", "/health", "/health/"):
+        for _ in range(3):
+            resp = client.get(path)
+            assert resp.status_code == 200
+
+
+def test_rate_limit_exempts_live_frame_stream():
+    """Verify high-frequency live mirror stream (/api/frames/live) is exempt from rate limits."""
+    settings = MusePilotSettings(
+        rate_limit_enabled=True,
+        rate_limit_read_per_minute=1,  # Strict limit of 1
+    )
+    app = create_app(settings=settings)
+    client = TestClient(app)
+
+    # Polling /api/frames/live 5 times in succession should never hit 429
     for _ in range(5):
-        resp = client.get("/api/health")
+        resp = client.get("/api/frames/live?driver=simulated&format=jpeg")
         assert resp.status_code == 200
+        # Should not carry ratelimit limit/remaining headers since it is exempt
+        assert resp.headers.get("x-ratelimit-remaining") is None
 
 
 def test_jwt_auth_via_secret_in_app():
